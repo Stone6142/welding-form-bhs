@@ -1,0 +1,128 @@
+/* style.css - dark mode */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background: #121212;
+  color: #f5f5f5;
+}
+
+header {
+  background: #1f1f1f;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+}
+
+header h1 {
+  font-size: 20px;
+}
+
+header .right {
+  font-size: 14px;
+}
+
+main {
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.card {
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+  margin-bottom: 20px;
+}
+
+h2 {
+  margin-bottom: 10px;
+}
+
+label {
+  display: block;
+  margin-top: 10px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+input, select, textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #262626;
+  color: #f5f5f5;
+}
+
+textarea {
+  min-height: 80px;
+}
+
+button {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  background: #2979ff;
+  color: #fff;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #1c54b2;
+}
+
+button.secondary {
+  background: #424242;
+}
+
+button.secondary:hover {
+  background: #616161;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+th, td {
+  border: 1px solid #333;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+th {
+  background: #2a2a2a;
+}
+
+.status-open {
+  color: #ffb74d;
+  font-weight: bold;
+}
+
+.status-solved {
+  color: #66bb6a;
+  font-weight: bold;
+}
+
+.small-text {
+  font-size: 12px;
+  color: #b0b0b0;
+  margin-top: 6px;
+}
+.hidden {
+  display: none;
+}

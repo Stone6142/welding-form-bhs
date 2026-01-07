@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Teacher Dashboard – Welding Shop</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Welding Shop – Teacher Dashboard</h1>
+      <div class="right" id="authStatus">Not logged in</div>
+    </header>
+
+    <main>
+      <!-- Login Card -->
+      <section class="card" id="loginCard">
+        <h2>Teacher Login</h2>
+        <label>Email:</label>
+        <input type="email" id="loginEmail" required />
+
+        <label>Password:</label>
+        <input type="password" id="loginPassword" required />
+
+        <button id="loginBtn">Login</button>
+        <p class="small-text" id="loginMessage"></p>
+      </section>
+
+      <!-- Dashboard Card -->
+      <section class="card" id="dashboardCard" style="display: none">
+        <h2>Issue Dashboard</h2>
+        <p class="small-text">
+          View and update issues submitted by students. Only the super admin can
+          create new admin accounts.
+        </p>
+
+        <button class="secondary" id="logoutBtn">Log Out</button>
+
+        <h3 style="margin-top: 16px">Open & Solved Issues</h3>
+        <table id="issuesTable">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Period</th>
+              <th>Booth</th>
+              <th>Process</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Super Admin Card -->
+      <section class="card" id="adminCard" style="display: none">
+        <h2>Super Admin – Create New Admin</h2>
+        <p class="small-text">
+          Only the super admin (<strong>sb4549@k12.sd.us</strong>) can create
+          new admin accounts.
+        </p>
+
+        <label>New Admin Email:</label>
+        <input type="email" id="newAdminEmail" />
+
+        <label>New Admin Password:</label>
+        <input type="password" id="newAdminPassword" />
+
+        <button id="createAdminBtn">Create Admin Account</button>
+        <p class="small-text" id="adminMessage"></p>
+      </section>
+    </main>
+
+    <!-- Firebase core -->
+    <script type="module" src="firebase.js"></script>
+
+    <!-- Page script -->
+    <script type="module">
+      import {
+        signInWithEmailAndPassword,
+        signOut,
+        onAuthStateChanged,
+        createUserWithEmailAndPassword,
+      } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+      import {
+        ref,
+        onValue,
+        update,
+      } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+      const auth = window.firebaseAuth;
+      const db = window.firebaseDb;
+
+      const SUPER_ADMIN_EMAIL = "sb4549@k12.sd.us";
+
+      const loginCard = document.getElementById("loginCard");
+      const dashboardCard = document.getElementById("dashboardCard");
+      const adminCard = document.getElementById("adminCard");
+      const authStatus = document.getElementById("authStatus");
+      const loginMessage = document.getElementById("loginMessage");
+      const adminMessage = document.getElementById("adminMessage");
+      const issuesTableBody = document.querySelector("#issuesTable tbody");
+
+      const loginBtn = document.getElementById("loginBtn");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const createAdminBtn = document.getElementById("createAdminBtn");
+
+      loginBtn.addEventListener("click", async () => {
+        loginMessage.textContent = "";
+        const email = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value.trim();
+
+        if (!email || !password) {
+          loginMessage.textContent = "Please enter email and password.";
+          return;
+        }
+
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+          loginMessage.textContent = "";
+        } catch (error) {
+          console.error(error);
+          loginMessage.textContent = "Login failed. Check your credentials.";
+        }
+      });
+
+      logoutBtn.addEventListener("click", async () => {
+        await signOut(auth);
+      });
+
+      // Auth state listener
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          authStatus.textContent = `Logged in as: ${user.email}`;
+          loginCard.style.display = "none";
+          dashboardCard.style.display = "block";
+
+          if (user.email === SUPER_ADMIN_EMAIL) {
+            adminCard.style.display = "block";
+          } else {
+            adminCard.style.display = "none";
+          }
+
+          subscribeToIssues();
+        } else {
+          authStatus.textContent = "Not logged in";
+          loginCard.style.display = "block";
+          dashboardCard.style.display = "none";
+          adminCard.style.display = "none";
+          issuesTableBody.innerHTML = "";
+        }
+      });
+
+      // Super admin creates new admin accounts
+      createAdminBtn.addEventListener("click", async () => {
+        adminMessage.textContent = "";
+        const user = auth.currentUser;
+        if (!user || user.email !== SUPER_ADMIN_EMAIL) {
+          adminMessage.textContent =
+            "You are not authorized to create admin accounts.";
+          return;
+        }
+
+        const email = document.getElementById("newAdminEmail").value.trim();
+        const password = document
+          .getElementById("newAdminPassword")
+          .value.trim();
+
+        if (!email || !password) {
+          adminMessage.textContent = "Please enter email and password.";
+          return;
+        }
+
+        try {
+          // IMPORTANT: This will create the user using the current session.
+          // In a real production app, you’d use Firebase Admin SDK on a server.
+          await createUserWithEmailAndPassword(auth, email, password);
+          adminMessage.textContent = "Admin account created successfully.";
+          document.getElementById("newAdminEmail").value = "";
+          document.getElementById("newAdminPassword").value = "";
+        } catch (error) {
+          console.error(error);
+          adminMessage.textContent =
+            "Error creating admin account: " + error.message;
+        }
+      });
+
+      // Subscribe to issues in Realtime Database
+      function subscribeToIssues() {
+        const issuesRef = ref(db, "issues");
+        onValue(issuesRef, (snapshot) => {
+          const data = snapshot.val() || {};
+          issuesTableBody.innerHTML = "";
+
+          Object.entries(data).forEach(([id, issue]) => {
+            const tr = document.createElement("tr");
+
+            const statusClass =
+              issue.status === "solved" ? "status-solved" : "status-open";
+            const statusLabel = issue.status === "solved" ? "Solved" : "Open";
+
+            tr.innerHTML = `
+			<td>${issue.studentName || ""}</td>
+			<td>${issue.classPeriod || ""}</td>
+			<td>${issue.boothNumber || ""}</td>
+			<td>${issue.processType || ""}</td>
+
+			<td>${issue.stickIssueType || ""} ${issue.stickOtherText || ""}</td>
+			<td>${issue.migIssueType || ""} ${issue.migOtherText || ""}</td>
+			<td>${issue.tigIssueType || ""} ${issue.tigOtherText || ""}</td>
+
+			<td>${issue.plasmaCutterType || ""}</td>
+			<td>${issue.plasmaIssueType || ""} ${issue.plasmaOtherText || ""}</td>
+
+			<td>${issue.toolState || ""}</td>
+			<td>${issue.toolType || ""} ${issue.toolOtherText || ""}</td>
+
+			<td class="${statusClass}">${statusLabel}</td>
+
+  <td>
+    ${
+      issue.status === "open"
+        ? `<button data-id="${id}" class="solveBtn">Mark Solved</button>`
+        : ""
+    }
+  </td>
+`;
+
+            issuesTableBody.appendChild(tr);
+          });
+
+          // Attach listeners to "Mark Solved" buttons
+          document.querySelectorAll(".solveBtn").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const id = btn.getAttribute("data-id");
+              const issueRef = ref(db, "issues/" + id);
+              try {
+                await update(issueRef, { status: "solved" });
+              } catch (error) {
+                console.error(error);
+                alert("Error updating issue status.");
+              }
+            });
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
