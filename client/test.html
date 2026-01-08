@@ -185,8 +185,8 @@
       <section class="card" id="adminCard" style="display: none">
         <h2>Super Admin – Create New Admin</h2>
         <p class="small-text">
-          Only the super admin (<strong>welder.admin@bhs.com</strong>) can create
-          new admin accounts.
+          Only the super admin (<strong>welder.admin@bhs.com</strong>) can
+          create new admin accounts.
         </p>
 
         <label>New Admin Email:</label>
@@ -578,8 +578,7 @@
       // =====================
       // REALTIME DATABASE SETUP
       // =====================
-      const rtdb = firebase.database();
-      const maintenanceRef = rtdb.ref("maintenance");
+      const maintenanceRef = db.ref("maintenance");
 
       let maintenanceData = [];
       let maintSortKey = "timestamp";
