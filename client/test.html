@@ -551,6 +551,9 @@
           deleteMessage.textContent = "Server error.";
         }
       });
+      ///////////////////////////////
+      ////// MAINTENANCE LOG ////////
+      ///////////////////////////////
       // =====================
       // TAB SWITCHING
       // =====================
@@ -578,7 +581,7 @@
       // =====================
       // REALTIME DATABASE SETUP
       // =====================
-      const maintenanceRef = db.ref("maintenance");
+      const maintenanceRef = ref(db, "maintenance");
 
       let maintenanceData = [];
       let maintSortKey = "timestamp";
@@ -604,10 +607,13 @@
         };
 
         const id = maintIdInput.value;
+
         if (id) {
-          maintenanceRef.child(id).update(entry);
+          // UPDATE (v9 syntax)
+          update(ref(db, `maintenance/${id}`), entry);
         } else {
-          maintenanceRef.push(entry);
+          // CREATE (v9 syntax)
+          push(maintenanceRef, entry);
         }
 
         maintForm.reset();
@@ -622,9 +628,9 @@
       };
 
       // =====================
-      // LIVE LISTENER
+      // LIVE LISTENER (v9 syntax)
       // =====================
-      maintenanceRef.on("value", (snapshot) => {
+      onValue(maintenanceRef, (snapshot) => {
         const data = snapshot.val() || {};
         maintenanceData = Object.entries(data).map(([id, val]) => ({
           id,
@@ -761,7 +767,7 @@
 
             if (action === "delete") {
               if (confirm("Delete this maintenance entry?")) {
-                maintenanceRef.child(id).remove();
+                remove(ref(db, `maintenance/${id}`));
               }
             }
           });
