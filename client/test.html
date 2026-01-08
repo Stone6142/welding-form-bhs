@@ -269,6 +269,7 @@
       const tabButtons = document.querySelectorAll(".tab-btn");
       const tableHeaders = document.querySelectorAll("th.sortable");
       const location = document.getElementById("location");
+      const status = document.getElementById("status");
 
       const loginBtn = document.getElementById("loginBtn");
       const logoutBtn = document.getElementById("logoutBtn");
@@ -605,7 +606,7 @@
 
       maintForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        console.log(location.value)
+        console.log(status.value)
         const entry = {
           machine: machine.value.trim(),
           location: location.value.trim(),
