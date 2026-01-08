@@ -154,6 +154,11 @@
         measurementId: "G-JSR34FQ59Y"
       };
 
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      const auth = getAuth(app);
+
 
 
       const loginCard = document.getElementById("loginCard");
