@@ -94,35 +94,10 @@
         <!-- MAINTENANCE LOG TAB -->
         <!-- ========================= -->
         <div id="maintenanceTab" class="tab-content hidden">
-          <div class="card">
+          
             <h2>Machine Maintenance Log</h2>
-
-            <!-- Filters -->
-            <div
-              style="
-                display: flex;
-                gap: 8px;
-                flex-wrap: wrap;
-                margin-bottom: 12px;
-              "
-            >
-              <input
-                type="text"
-                id="maintSearch"
-                placeholder="Search machine or notes..."
-                style="flex: 1; padding: 8px"
-              />
-              <select id="maintStatusFilter" style="padding: 8px">
-                <option value="">All Statuses</option>
-                <option value="Operational">Operational</option>
-                <option value="Needs Service">Needs Service</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Out of Order">Out of Order</option>
-              </select>
-              <input type="date" id="maintFromDate" style="padding: 8px" />
-              <input type="date" id="maintToDate" style="padding: 8px" />
-            </div>
-
+            <div class="card">
+            <h3>Maintenance Form</h3>
             <!-- Form -->
             <form id="maintenanceForm">
               <input type="hidden" id="maintId" />
@@ -150,6 +125,7 @@
               <button type="submit" class="primary" id="maintSaveBtn">
                 Save
               </button>
+              </div>
               <button
                 type="button"
                 class="secondary"
@@ -159,7 +135,35 @@
                 Cancel Edit
               </button>
             </form>
+          <div class="card">
+            <h3>Filters </h3>
+            <!-- Filters -->
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 12px;
+              "
+            >
+              <input
+                type="text"
+                id="maintSearch"
+                placeholder="Search machine or notes..."
+                style="flex: 1; padding: 8px"
+              />
+              <select id="maintStatusFilter" style="padding: 8px">
+                <option value="">All Statuses</option>
+                <option value="Operational">Operational</option>
+                <option value="Needs Service">Needs Service</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Out of Order">Out of Order</option>
+              </select>
+              <input type="date" id="maintFromDate" style="padding: 8px" />
+              <input type="date" id="maintToDate" style="padding: 8px" />
+            </div>
           </div>
+
 
           <div class="card">
             <h2>Maintenance Records</h2>
@@ -578,12 +582,12 @@
 
           if (tab === "maintenance") {
             document.getElementById("issuesTab").classList.add("hidden");
-            document
-              .getElementById("maintenanceTab")
-              .classList.remove("hidden");
+            document.getElementById("issuesTab").classList.add("hidden");
+            document.getElementById("searchInput").classList.remove("hidden");
           } else {
             document.getElementById("maintenanceTab").classList.add("hidden");
             document.getElementById("issuesTab").classList.remove("hidden");
+            document.getElementById("searchInput").classList.remove("hidden");
           }
         });
       });
