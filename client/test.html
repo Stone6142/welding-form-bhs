@@ -47,7 +47,8 @@
       <section class="card" id="dashboardCard" style="display: none">
         <h2>Teacher Dashboard</h2>
         <p class="small-text">
-          View and update issues and machine maintenance logs submitted in the shop.
+          View and update issues and machine maintenance logs submitted in the
+          shop.
         </p>
 
         <button class="secondary" id="logoutBtn">Log Out</button>
@@ -64,7 +65,9 @@
         <div class="tabs">
           <button class="tab-btn active" data-tab="open">Open Issues</button>
           <button class="tab-btn" data-tab="solved">Solved Issues</button>
-          <button class="tab-btn" data-tab="maintenance">Maintenance Log</button>
+          <button class="tab-btn" data-tab="maintenance">
+            Maintenance Log
+          </button>
         </div>
 
         <!-- ========================= -->
@@ -95,22 +98,29 @@
             <h2>Machine Maintenance Log</h2>
 
             <!-- Filters -->
-            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 12px;
+              "
+            >
               <input
                 type="text"
                 id="maintSearch"
                 placeholder="Search machine or notes..."
-                style="flex:1; padding:8px;"
+                style="flex: 1; padding: 8px"
               />
-              <select id="maintStatusFilter" style="padding:8px;">
+              <select id="maintStatusFilter" style="padding: 8px">
                 <option value="">All Statuses</option>
                 <option value="Operational">Operational</option>
                 <option value="Needs Service">Needs Service</option>
                 <option value="In Progress">In Progress</option>
                 <option value="Out of Order">Out of Order</option>
               </select>
-              <input type="date" id="maintFromDate" style="padding:8px;" />
-              <input type="date" id="maintToDate" style="padding:8px;" />
+              <input type="date" id="maintFromDate" style="padding: 8px" />
+              <input type="date" id="maintToDate" style="padding: 8px" />
             </div>
 
             <!-- Form -->
@@ -137,8 +147,15 @@
                 <option>Out of Order</option>
               </select>
 
-              <button type="submit" class="primary" id="maintSaveBtn">Save</button>
-              <button type="button" class="secondary" id="maintCancelEdit" style="display:none;">
+              <button type="submit" class="primary" id="maintSaveBtn">
+                Save
+              </button>
+              <button
+                type="button"
+                class="secondary"
+                id="maintCancelEdit"
+                style="display: none"
+              >
                 Cancel Edit
               </button>
             </form>
@@ -177,13 +194,14 @@
          INSERT YOUR FIREBASE CONFIG HERE
       --------------------------------------------------------- */
       const firebaseConfig = {
-        apiKey: "",
-        authDomain: "",
-        databaseURL: "",
-        projectId: "",
-        storageBucket: "",
-        messagingSenderId: "",
-        appId: ""
+        apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
+        authDomain: "welding-form.firebaseapp.com",
+        databaseURL: "https://welding-form-default-rtdb.firebaseio.com",
+        projectId: "welding-form",
+        storageBucket: "welding-form.firebasestorage.app",
+        messagingSenderId: "69271735442",
+        appId: "1:69271735442:web:e438afe73f604563d22a4b",
+        measurementId: "G-JSR34FQ59Y",
       };
       firebase.initializeApp(firebaseConfig);
 
@@ -197,13 +215,15 @@
         const email = loginEmail.value;
         const pass = loginPassword.value;
 
-        firebase.auth().signInWithEmailAndPassword(email, pass)
+        firebase
+          .auth()
+          .signInWithEmailAndPassword(email, pass)
           .then(() => {
             loginCard.style.display = "none";
             dashboardCard.style.display = "block";
             authStatus.textContent = "Logged in as " + email;
           })
-          .catch(err => {
+          .catch((err) => {
             loginMessage.textContent = err.message;
           });
       };
@@ -218,11 +238,13 @@
       /* ---------------------------------------------------------
          TAB SWITCHING
       --------------------------------------------------------- */
-      document.querySelectorAll(".tab-btn").forEach(btn => {
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           const tab = btn.dataset.tab;
 
-          document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+          document
+            .querySelectorAll(".tab-btn")
+            .forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
 
           if (tab === "maintenance") {
@@ -249,7 +271,7 @@
       const maintIdInput = document.getElementById("maintId");
       const maintCancelEdit = document.getElementById("maintCancelEdit");
 
-      maintForm.addEventListener("submit", e => {
+      maintForm.addEventListener("submit", (e) => {
         e.preventDefault();
 
         const entry = {
@@ -258,7 +280,7 @@
           date: date.value,
           notes: notes.value.trim(),
           status: status.value,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
 
         const id = maintIdInput.value;
@@ -279,33 +301,40 @@
         maintCancelEdit.style.display = "none";
       };
 
-      maintenanceRef.on("value", snapshot => {
+      maintenanceRef.on("value", (snapshot) => {
         const data = snapshot.val() || {};
-        maintenanceData = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+        maintenanceData = Object.entries(data).map(([id, val]) => ({
+          id,
+          ...val,
+        }));
         renderMaintenanceTable();
       });
 
-      document.querySelectorAll("#maintenanceTable th.sortable").forEach(th => {
-        th.addEventListener("click", () => {
-          const key = th.dataset.key;
-          if (maintSortKey === key) {
-            maintSortDir = maintSortDir === "asc" ? "desc" : "asc";
-          } else {
-            maintSortKey = key;
-            maintSortDir = "asc";
-          }
-          renderMaintenanceTable();
+      document
+        .querySelectorAll("#maintenanceTable th.sortable")
+        .forEach((th) => {
+          th.addEventListener("click", () => {
+            const key = th.dataset.key;
+            if (maintSortKey === key) {
+              maintSortDir = maintSortDir === "asc" ? "desc" : "asc";
+            } else {
+              maintSortKey = key;
+              maintSortDir = "asc";
+            }
+            renderMaintenanceTable();
+          });
         });
-      });
 
       const maintSearch = document.getElementById("maintSearch");
       const maintStatusFilter = document.getElementById("maintStatusFilter");
       const maintFromDate = document.getElementById("maintFromDate");
       const maintToDate = document.getElementById("maintToDate");
 
-      [maintSearch, maintStatusFilter, maintFromDate, maintToDate].forEach(el => {
-        el.addEventListener("input", renderMaintenanceTable);
-      });
+      [maintSearch, maintStatusFilter, maintFromDate, maintToDate].forEach(
+        (el) => {
+          el.addEventListener("input", renderMaintenanceTable);
+        },
+      );
 
       function renderMaintenanceTable() {
         const tbody = document.querySelector("#maintenanceTable tbody");
@@ -318,7 +347,7 @@
         const fromDate = maintFromDate.value;
         const toDate = maintToDate.value;
 
-        rows = rows.filter(r => {
+        rows = rows.filter((r) => {
           const matchesSearch =
             !search ||
             r.machine.toLowerCase().includes(search) ||
@@ -351,7 +380,7 @@
           return 0;
         });
 
-        rows.forEach(r => {
+        rows.forEach((r) => {
           const tr = document.createElement("tr");
 
           tr.innerHTML = `
@@ -369,13 +398,13 @@
           tbody.appendChild(tr);
         });
 
-        tbody.querySelectorAll("button[data-action]").forEach(btn => {
+        tbody.querySelectorAll("button[data-action]").forEach((btn) => {
           const id = btn.dataset.id;
           const action = btn.dataset.action;
 
           btn.addEventListener("click", () => {
             if (action === "edit") {
-              const row = maintenanceData.find(r => r.id === id);
+              const row = maintenanceData.find((r) => r.id === id);
               if (!row) return;
 
               maintIdInput.value = row.id;
@@ -387,7 +416,9 @@
 
               maintCancelEdit.style.display = "inline-block";
 
-              document.querySelector('.tab-btn[data-tab="maintenance"]').click();
+              document
+                .querySelector('.tab-btn[data-tab="maintenance"]')
+                .click();
             } else if (action === "delete") {
               if (confirm("Delete this maintenance entry?")) {
                 maintenanceRef.child(id).remove();
