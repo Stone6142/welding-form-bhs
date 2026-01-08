@@ -188,14 +188,7 @@
         <div class="card">
           <h2>Stock / Inventory</h2>
 
-          <!-- Search -->
-          <input
-            type="text"
-            id="stockSearch"
-            placeholder="Search parts..."
-            style="width: 100%; padding: 8px; margin-bottom: 16px;"
-          />
-
+        
           <!-- Add / Edit Form -->
           <form id="stockForm">
             <input type="hidden" id="stockId" />
@@ -218,6 +211,13 @@
 
         <div class="card">
           <h2>Inventory List</h2>
+          <!-- Search -->
+          <input
+            type="text"
+            id="stockSearch"
+            placeholder="Search parts..."
+            style="width: 100%; padding: 8px; margin-bottom: 16px;"
+          />
 
           <table id="stockTable">
             <thead>
@@ -233,6 +233,53 @@
           </table>
         </div>
       </div>
+      <!-- ========== TANK PSI SECTION ========== -->
+      <div id="tankTab1" class="card hidden" style="margin-top: 24px;" >
+        <h2>Tank PSI Tracking</h2>
+
+        
+
+        <!-- Add / Edit Form -->
+        <form id="tankForm">
+          <input type="hidden" id="tankId" />
+
+          <label>Tank Name</label>
+          <input type="text" id="tankName" required />
+
+          <label>Air Type</label>
+          <input type="text" id="tankAirType" required />
+
+          <label>PSI</label>
+          <input type="number" id="tankPSI" min="0" required />
+
+          <button type="submit" class="primary">Save Tank</button>
+        </form>
+      </div>
+
+      <div class="card hidden" id="tankTab">
+        <h2>Tank List</h2>
+        <!-- Search -->
+        
+        <input
+          type="text"
+          id="tankSearch"
+          placeholder="Search tanks..."
+          style="width: 100%; padding: 8px; margin-bottom: 16px;"
+        />
+        <button href="tankchart.html" >Tank Chart</button>
+        <table id="tankTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-key="tankName">Tank</th>
+              <th class="sortable" data-key="airType">Air Type</th>
+              <th class="sortable" data-key="psi">PSI</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
 
 
       <!-- Super Admin Card -->
@@ -618,29 +665,47 @@
       ///////////////////////////////
       ////// MAINTENANCE LOG ////////
       ///////////////////////////////
+
+      
       // =====================
-      // TAB SWITCHING
+      // TAB SWITCHER
+      // Supports: open, solved, maintenance, stock
       // =====================
+
+      
       document.querySelectorAll(".tab-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           const tab = btn.dataset.tab;
 
-          document
-            .querySelectorAll(".tab-btn")
-            .forEach((b) => b.classList.remove("active"));
+          // Update active button
+          document.querySelectorAll(".tab-btn").forEach((b) => {
+            b.classList.remove("active");
+          });
           btn.classList.add("active");
 
-          if (tab === "maintenance") {
-            document.getElementById("searchInput").classList.add("hidden");
-            document.getElementById("issuesTab").classList.add("hidden");
-            document.getElementById("maintenanceTab").classList.remove("hidden");
-          } else {
-            document.getElementById("maintenanceTab").classList.add("hidden");
+          // Hide all tab contents
+          document.querySelectorAll(".tab-content").forEach((content) => {
+            content.classList.add("hidden");
+          });
+
+          // Show the selected tab
+          if (tab === "open" || tab === "solved") {
             document.getElementById("issuesTab").classList.remove("hidden");
-            document.getElementById("searchInput").classList.remove("hidden");
+            // Your existing issues filtering logic will handle open/solved
+          }
+
+          if (tab === "maintenance") {
+            document.getElementById("maintenanceTab").classList.remove("hidden");
+          }
+
+          if (tab === "stock") {
+            document.getElementById("stockTab").classList.remove("hidden");
+            document.getElementById("tankTab").classList.remove("hidden");
+            document.getElementById("tankTab1").classList.remove("hidden");
           }
         });
       });
+
 
       // =====================
       // REALTIME DATABASE SETUP
@@ -1032,6 +1097,178 @@
           });
         });
       }
+
+      // =====================
+      // TANK PSI TRACKING
+      // =====================
+
+      // DB reference
+      const tankRef = ref(db, "inventory/tanks");
+
+      // Local cache
+      let tankData = [];
+      let tankSortKey = "tankName";
+      let tankSortDir = "asc";
+
+      // Elements
+      const tankForm = document.getElementById("tankForm");
+      const tankIdInput = document.getElementById("tankId");
+      const tankSearch = document.getElementById("tankSearch");
+
+      // =====================
+      // LOG PSI HISTORY
+      // =====================
+      function logPSIChange(tankId, psi) {
+        const logRef = ref(db, `inventory/tanks/${tankId}/psiHistory/${Date.now()}`);
+        set(logRef, { psi });
+      }
+
+      // =====================
+      // FORM SUBMIT (CREATE / UPDATE)
+      // =====================
+      tankForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const tankName = document.getElementById("tankName").value.trim();
+        const airType = document.getElementById("tankAirType").value.trim();
+        const psi = parseInt(document.getElementById("tankPSI").value, 10) || 0;
+
+        if (!tankName) return;
+
+        const key = tankName.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
+        const oldKey = tankIdInput.value;
+
+        const entry = {
+          tankName,
+          airType,
+          psi,
+          updatedAt: Date.now()
+        };
+
+        if (oldKey && oldKey !== key) {
+          remove(ref(db, `inventory/tanks/${oldKey}`)).then(() => {
+            set(ref(db, `inventory/tanks/${key}`), entry).then(() => {
+              logPSIChange(key, psi);
+            });
+          });
+        } else {
+          set(ref(db, `inventory/tanks/${key}`), entry).then(() => {
+            logPSIChange(key, psi);
+          });
+        }
+
+        tankForm.reset();
+        tankIdInput.value = "";
+      });
+
+      // =====================
+      // LIVE LISTENER
+      // =====================
+      onValue(tankRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        tankData = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+        renderTankTable();
+      });
+
+      // =====================
+      // SORTING
+      // =====================
+      document.querySelectorAll("#tankTable th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.key;
+
+          if (tankSortKey === key) {
+            tankSortDir = tankSortDir === "asc" ? "desc" : "asc";
+          } else {
+            tankSortKey = key;
+            tankSortDir = "asc";
+          }
+
+          renderTankTable();
+        });
+      });
+
+      // =====================
+      // SEARCH
+      // =====================
+      tankSearch.addEventListener("input", renderTankTable);
+
+      // =====================
+      // RENDER TABLE
+      // =====================
+      function renderTankTable() {
+        const tbody = document.querySelector("#tankTable tbody");
+        tbody.innerHTML = "";
+
+        let rows = [...tankData];
+
+        const search = tankSearch.value.toLowerCase();
+
+        rows = rows.filter((r) => {
+          return (
+            !search ||
+            (r.tankName || "").toLowerCase().includes(search) ||
+            (r.airType || "").toLowerCase().includes(search)
+          );
+        });
+
+        rows.sort((a, b) => {
+          let va = a[tankSortKey];
+          let vb = b[tankSortKey];
+
+          if (tankSortKey === "psi") {
+            va = Number(va) || 0;
+            vb = Number(vb) || 0;
+          } else {
+            va = (va || "").toString().toLowerCase();
+            vb = (vb || "").toString().toLowerCase();
+          }
+
+          if (va < vb) return tankSortDir === "asc" ? -1 : 1;
+          if (va > vb) return tankSortDir === "asc" ? 1 : -1;
+          return 0;
+        });
+
+        rows.forEach((r) => {
+          // PSI COLOR LOGIC
+          let psiColor = "";
+          if (r.psi <= 500) psiColor = "color: #ff4d4d; font-weight: bold;";
+          else if (r.psi <= 3000) psiColor = "color: #ffd633; font-weight: bold;";
+          else psiColor = "color: #008000; font-weight: bold;"
+          const tr = document.createElement("tr");
+
+          tr.innerHTML = `
+            <td>${r.tankName || ""}</td>
+            <td>${r.airType || ""}</td>
+            <td style="${psiColor}">${r.psi ?? 0}</td>
+            <td>
+              <button class="secondary" data-id="${r.id}" data-action="edit">Edit</button>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll("button[data-action]").forEach((btn) => {
+          const id = btn.dataset.id;
+          const action = btn.dataset.action;
+          const row = tankData.find((r) => r.id === id);
+
+          btn.addEventListener("click", () => {
+            if (!row) return;
+
+            if (action === "edit") {
+              tankIdInput.value = id;
+              document.getElementById("tankName").value = row.tankName || "";
+              document.getElementById("tankAirType").value = row.airType || "";
+              document.getElementById("tankPSI").value = row.psi ?? 0;
+
+              document.querySelector('.tab-btn[data-tab="stock"]').click();
+            }
+          });
+        });
+      }
+
 
       
     </script>
