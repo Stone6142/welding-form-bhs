@@ -757,5 +757,344 @@
         }
       });
     </script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+      import {
+        signInWithEmailAndPassword,
+        signOut,
+        onAuthStateChanged,
+        createUserWithEmailAndPassword,
+      } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+      import {
+        ref,
+        onValue,
+        update,
+      } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+      const SUPER_ADMIN_EMAIL = "welder.admin@bhs.com";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
+        authDomain: "welding-form.firebaseapp.com",
+        databaseURL: "https://welding-form-default-rtdb.firebaseio.com",
+        projectId: "welding-form",
+        storageBucket: "welding-form.firebasestorage.app",
+        messagingSenderId: "69271735442",
+        appId: "1:69271735442:web:e438afe73f604563d22a4b",
+        measurementId: "G-JSR34FQ59Y",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      //const analytics = getAnalytics(app);
+      const auth = getAuth(app);
+      const db = getDatabase(app);
+
+      const loginCard = document.getElementById("loginCard");
+      const dashboardCard = document.getElementById("dashboardCard");
+      const adminCard = document.getElementById("adminCard");
+      const adminCard1 = document.getElementById("adminCard1");
+      const authStatus = document.getElementById("authStatus");
+      const loginMessage = document.getElementById("loginMessage");
+      const adminMessage = document.getElementById("adminMessage");
+      const issuesTableBody = document.querySelector("#issuesTable tbody");
+      const searchInput = document.getElementById("searchInput");
+      const tabButtons = document.querySelectorAll(".tab-btn");
+      const tableHeaders = document.querySelectorAll("th.sortable");
+
+      const loginBtn = document.getElementById("loginBtn");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const createAdminBtn = document.getElementById("createAdminBtn");
+
+      let allIssues = {}; // raw data from Firebase
+      let currentTab = "open"; // 'open' or 'solved'
+      let sortState = { key: null, direction: 1 }; // 1 = asc, -1 = desc
+
+      loginBtn.addEventListener("click", async () => {
+        loginMessage.textContent = "";
+        const email = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value.trim();
+
+        if (!email || !password) {
+          loginMessage.textContent = "Please enter email and password.";
+          return;
+        }
+
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+          loginMessage.textContent = "";
+        } catch (error) {
+          console.error(error);
+          loginMessage.textContent = "Login failed. Check your credentials.";
+        }
+      });
+
+      logoutBtn.addEventListener("click", async () => {
+        await signOut(auth);
+      });
+
+      // Auth state listener
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          authStatus.textContent = `Logged in as: ${user.email}`;
+          loginCard.style.display = "none";
+          dashboardCard.style.display = "block";
+
+          if (user.email === SUPER_ADMIN_EMAIL) {
+            adminCard.style.display = "block";
+            adminCard1.style.display = "block";
+          } else {
+            adminCard.style.display = "none";
+            adminCard1.style.display = "none";
+          }
+
+          subscribeToIssues();
+        } else {
+          authStatus.textContent = "Not logged in";
+          loginCard.style.display = "block";
+          dashboardCard.style.display = "none";
+          adminCard.style.display = "none";
+          adminCard1.style.display = "none";
+          issuesTableBody.innerHTML = "";
+        }
+      });
+
+      // Super admin creates new admin accounts
+      createAdminBtn.addEventListener("click", async () => {
+        adminMessage.textContent = "";
+        const user = auth.currentUser;
+        if (!user || user.email !== SUPER_ADMIN_EMAIL) {
+          adminMessage.textContent =
+            "You are not authorized to create admin accounts.";
+          return;
+        }
+
+        const email = document.getElementById("newAdminEmail").value.trim();
+        const password = document
+          .getElementById("newAdminPassword")
+          .value.trim();
+
+        if (!email || !password) {
+          adminMessage.textContent = "Please enter email and password.";
+          return;
+        }
+
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+          adminMessage.textContent = "Admin account created successfully.";
+          document.getElementById("newAdminEmail").value = "";
+          document.getElementById("newAdminPassword").value = "";
+        } catch (error) {
+          console.error(error);
+          adminMessage.textContent =
+            "Error creating admin account: " + error.message;
+        }
+      });
+
+      // Build dynamic issue description
+      function buildIssueDescription(issue) {
+        let parts = [];
+
+        if (issue.stickIssueType) {
+          parts.push(
+            `Stick: ${issue.stickIssueType} ${issue.stickOtherText || ""}`,
+          );
+        }
+        if (issue.migIssueType) {
+          parts.push(`MIG: ${issue.migIssueType} ${issue.migOtherText || ""}`);
+        }
+        if (issue.tigIssueType) {
+          parts.push(`TIG: ${issue.tigIssueType} ${issue.tigOtherText || ""}`);
+        }
+        if (issue.plasmaCutterType || issue.plasmaIssueType) {
+          parts.push(
+            `Plasma (${issue.plasmaCutterType || ""}): ${issue.plasmaIssueType || ""} ${issue.plasmaOtherText || ""}`,
+          );
+        }
+        if (issue.toolState || issue.toolType) {
+          parts.push(
+            `Tool: ${issue.toolState || ""} – ${issue.toolType || ""} ${issue.toolOtherText || ""}`,
+          );
+        }
+
+        return parts.join("<br>");
+      }
+
+      // Render table based on currentTab, search, and sort
+      function renderTable() {
+        issuesTableBody.innerHTML = "";
+
+        const query = searchInput.value.toLowerCase();
+
+        let entries = Object.entries(allIssues).map(([id, issue]) => {
+          return {
+            id,
+            ...issue,
+            issueDetails: buildIssueDescription(issue),
+          };
+        });
+
+        // Filter by tab (status)
+        entries = entries.filter((item) => {
+          if (currentTab === "open") return item.status !== "solved";
+          if (currentTab === "solved") return item.status === "solved";
+          return true;
+        });
+
+        // Filter by search
+        if (query) {
+          entries = entries.filter((item) => {
+            const text = (
+              (item.studentName || "") +
+              " " +
+              (item.classPeriod || "") +
+              " " +
+              (item.boothNumber || "") +
+              " " +
+              (item.processType || "") +
+              " " +
+              (item.issueDetails || "") +
+              " " +
+              (item.status || "")
+            ).toLowerCase();
+            return text.includes(query);
+          });
+        }
+
+        // Sort
+        if (sortState.key) {
+          const key = sortState.key;
+          const dir = sortState.direction;
+          entries.sort((a, b) => {
+            const va = (a[key] || "").toString().toLowerCase();
+            const vb = (b[key] || "").toString().toLowerCase();
+            if (va < vb) return -1 * dir;
+            if (va > vb) return 1 * dir;
+            return 0;
+          });
+        }
+
+        // Render rows
+        entries.forEach((item) => {
+          const tr = document.createElement("tr");
+
+          const statusClass =
+            item.status === "solved" ? "status-solved" : "status-open";
+          const statusLabel = item.status === "solved" ? "Solved" : "Open";
+
+          tr.innerHTML = `
+        <td>${item.studentName || ""}</td>
+        <td>${item.classPeriod || ""}</td>
+        <td>${item.boothNumber || ""}</td>
+        <td>${item.processType || ""}</td>
+        <td>${item.issueDetails || ""}</td>
+        <td class="${statusClass}">${statusLabel}</td>
+        <td>
+          <button 
+            data-id="${item.id}" 
+            class="toggleStatusBtn"
+            style="background:${item.status === "open" ? "#4CAF50" : "#FF9800"}; color:white;"
+          >
+            ${item.status === "open" ? "Mark Solved" : "Mark Open"}
+          </button>
+        </td>
+      `;
+
+          issuesTableBody.appendChild(tr);
+        });
+
+        // Attach listeners to toggle buttons
+        document.querySelectorAll(".toggleStatusBtn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-id");
+            const issueRef = ref(db, "issues/" + id);
+
+            const current = allIssues[id];
+            const newStatus = current.status === "open" ? "solved" : "open";
+
+            try {
+              await update(issueRef, { status: newStatus });
+            } catch (error) {
+              console.error(error);
+              alert("Error updating issue status.");
+            }
+          });
+        });
+      }
+
+      // Live search
+      searchInput.addEventListener("input", renderTable);
+
+      // Tabs
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          tabButtons.forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          currentTab = btn.getAttribute("data-tab");
+          renderTable();
+        });
+      });
+
+      // Sorting
+      tableHeaders.forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.getAttribute("data-key");
+          if (sortState.key === key) {
+            sortState.direction *= -1; // toggle direction
+          } else {
+            sortState.key = key;
+            sortState.direction = 1;
+          }
+          renderTable();
+        });
+      });
+
+      // Subscribe to issues in Realtime Database
+      function subscribeToIssues() {
+        const issuesRef = ref(db, "issues");
+        onValue(issuesRef, (snapshot) => {
+          allIssues = snapshot.val() || {};
+          renderTable();
+        });
+      }
+      const deleteBtn = document.getElementById("deleteBtn");
+      const deleteEmail = document.getElementById("deleteEmail");
+      const deleteMessage = document.getElementById("deleteMessage");
+
+      deleteBtn.addEventListener("click", async () => {
+        const email = deleteEmail.value.trim();
+        deleteMessage.textContent = "";
+
+        if (!email) {
+          deleteMessage.textContent = "Enter an email.";
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/deleteUser", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-email": auth.currentUser.email,
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            deleteMessage.textContent = "Account deleted successfully.";
+            deleteEmail.value = "";
+          } else {
+            deleteMessage.textContent = "Error: " + data.error;
+          }
+        } catch (err) {
+          deleteMessage.textContent = "Server error.";
+        }
+      });
+    </script>
   </body>
 </html>
