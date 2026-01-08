@@ -185,7 +185,7 @@
       <section class="card" id="adminCard" style="display: none">
         <h2>Super Admin – Create New Admin</h2>
         <p class="small-text">
-          Only the super admin (<strong>ASK TEACHER</strong>) can
+          Only the super admin (<strong>welder.admin@bhs.com</strong>) can
           create new admin accounts.
         </p>
 
@@ -228,6 +228,14 @@
         ref,
         onValue,
         update,
+        push,
+        remove,
+        set,
+        get,
+        child,
+        query,
+        orderByChild,
+        equalTo
       } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
       const SUPER_ADMIN_EMAIL = "welder.admin@bhs.com";
@@ -260,6 +268,8 @@
       const searchInput = document.getElementById("searchInput");
       const tabButtons = document.querySelectorAll(".tab-btn");
       const tableHeaders = document.querySelectorAll("th.sortable");
+      const location = document.getElementById("location");
+      const status = document.getElementById("status");
 
       const loginBtn = document.getElementById("loginBtn");
       const logoutBtn = document.getElementById("logoutBtn");
@@ -596,7 +606,7 @@
 
       maintForm.addEventListener("submit", (e) => {
         e.preventDefault();
-
+        console.log(status.value)
         const entry = {
           machine: machine.value.trim(),
           location: location.value.trim(),
