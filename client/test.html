@@ -4,23 +4,9 @@
     <meta charset="UTF-8" />
     <title>Teacher Dashboard – Welding Shop</title>
     <link rel="stylesheet" href="style.css" />
+
     <style>
-      .tabs {
-        display: flex;
-        gap: 8px;
-        margin: 16px 0;
-      }
-      .tab-btn {
-        padding: 8px 16px;
-        border: 1px solid #ccc;
-        background: #f5f5f5;
-        cursor: pointer;
-      }
-      .tab-btn.active {
-        background: #2196f3;
-        color: white;
-        border-color: #2196f3;
-      }
+      /* Additional small styles for sorting arrows */
       th.sortable {
         cursor: pointer;
       }
@@ -31,6 +17,7 @@
       }
     </style>
   </head>
+
   <body>
     <header>
       <h1>Welding Shop – Teacher Dashboard</h1>
@@ -38,30 +25,34 @@
     </header>
 
     <main>
-      <!-- Login Card -->
+      <!-- ========================= -->
+      <!-- LOGIN CARD -->
+      <!-- ========================= -->
       <section class="card" id="loginCard">
         <h2>Teacher Login</h2>
+
         <label>Email:</label>
         <input type="email" id="loginEmail" required />
 
         <label>Password:</label>
         <input type="password" id="loginPassword" required />
 
-        <button id="loginBtn" type="button">Login</button>
+        <button id="loginBtn" type="button" class="primary">Login</button>
         <p class="small-text" id="loginMessage"></p>
       </section>
 
-      <!-- Dashboard Card -->
+      <!-- ========================= -->
+      <!-- DASHBOARD CARD -->
+      <!-- ========================= -->
       <section class="card" id="dashboardCard" style="display: none">
-        <h2>Issue Dashboard</h2>
+        <h2>Teacher Dashboard</h2>
         <p class="small-text">
-          View and update issues submitted by students. Only the super admin can
-          create new admin accounts.
+          View and update issues and machine maintenance logs submitted in the shop.
         </p>
 
         <button class="secondary" id="logoutBtn">Log Out</button>
 
-        <!-- Search Bar -->
+        <!-- Search Bar (Issues only) -->
         <input
           type="text"
           id="searchInput"
@@ -73,59 +64,59 @@
         <div class="tabs">
           <button class="tab-btn active" data-tab="open">Open Issues</button>
           <button class="tab-btn" data-tab="solved">Solved Issues</button>
+          <button class="tab-btn" data-tab="maintenance">Maintenance Log</button>
         </div>
 
-        <table id="issuesTable">
-          <thead>
-            <tr>
-              <th class="sortable" data-key="studentName">Student</th>
-              <th class="sortable" data-key="classPeriod">Period</th>
-              <th class="sortable" data-key="boothNumber">Booth</th>
-              <th class="sortable" data-key="processType">Process</th>
-              <th class="sortable" data-key="issueDetails">Issue Details</th>
-              <th class="sortable" data-key="status">Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </section>
-
-      <section>
         <!-- ========================= -->
-        <!--   MAINTENANCE TAB BLOCK   -->
+        <!-- OPEN / SOLVED ISSUES TAB -->
         <!-- ========================= -->
+        <div id="issuesTab" class="tab-content">
+          <table id="issuesTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-key="studentName">Student</th>
+                <th class="sortable" data-key="classPeriod">Period</th>
+                <th class="sortable" data-key="boothNumber">Booth</th>
+                <th class="sortable" data-key="processType">Process</th>
+                <th class="sortable" data-key="issueDetails">Issue Details</th>
+                <th class="sortable" data-key="status">Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
 
-        <!-- Add this button to your nav with the others -->
-        <button class="tab-button" data-tab="maintenanceTab">
-          Maintenance Log
-        </button>
+        <!-- ========================= -->
+        <!-- MAINTENANCE LOG TAB -->
+        <!-- ========================= -->
+        <div id="maintenanceTab" class="tab-content hidden">
+          <div class="card">
+            <h2>Machine Maintenance Log</h2>
 
-        <!-- Maintenance Tab Content -->
-        <div
-          id="maintenanceTab"
-          class="tab-content"
-          style="display: none; padding: 20px"
-        >
-          <h2 style="margin-bottom: 15px">Machine Maintenance Log</h2>
+            <!-- Filters -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+              <input
+                type="text"
+                id="maintSearch"
+                placeholder="Search machine or notes..."
+                style="flex:1; padding:8px;"
+              />
+              <select id="maintStatusFilter" style="padding:8px;">
+                <option value="">All Statuses</option>
+                <option value="Operational">Operational</option>
+                <option value="Needs Service">Needs Service</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Out of Order">Out of Order</option>
+              </select>
+              <input type="date" id="maintFromDate" style="padding:8px;" />
+              <input type="date" id="maintToDate" style="padding:8px;" />
+            </div>
 
-          <!-- Form Card -->
-          <div
-            style="
-              background: #ffffff;
-              padding: 20px;
-              border-radius: 10px;
-              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-              max-width: 600px;
-              margin-bottom: 25px;
-            "
-          >
-            <h3 style="margin-top: 0">Add Maintenance Entry</h3>
+            <!-- Form -->
+            <form id="maintenanceForm">
+              <input type="hidden" id="maintId" />
 
-            <form
-              id="maintenanceForm"
-              style="display: flex; flex-direction: column; gap: 12px"
-            >
               <label>Machine Name</label>
               <input type="text" id="machine" required />
 
@@ -146,559 +137,265 @@
                 <option>Out of Order</option>
               </select>
 
-              <button
-                type="submit"
-                style="
-                  background: #007bff;
-                  color: white;
-                  padding: 10px;
-                  border: none;
-                  border-radius: 5px;
-                  cursor: pointer;
-                "
-              >
-                Submit
+              <button type="submit" class="primary" id="maintSaveBtn">Save</button>
+              <button type="button" class="secondary" id="maintCancelEdit" style="display:none;">
+                Cancel Edit
               </button>
             </form>
           </div>
 
-          <!-- Table Card -->
-          <div
-            style="
-              background: #ffffff;
-              padding: 20px;
-              border-radius: 10px;
-              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-            "
-          >
-            <h3 style="margin-top: 0">Maintenance Records</h3>
+          <div class="card">
+            <h2>Maintenance Records</h2>
 
-            <table
-              id="maintenanceTable"
-              style="width: 100%; border-collapse: collapse"
-            >
+            <table id="maintenanceTable">
               <thead>
-                <tr style="background: #f0f0f0">
-                  <th style="padding: 8px; border-bottom: 1px solid #ccc">
-                    Machine
-                  </th>
-                  <th style="padding: 8px; border-bottom: 1px solid #ccc">
-                    Location
-                  </th>
-                  <th style="padding: 8px; border-bottom: 1px solid #ccc">
-                    Date
-                  </th>
-                  <th style="padding: 8px; border-bottom: 1px solid #ccc">
-                    Notes
-                  </th>
-                  <th style="padding: 8px; border-bottom: 1px solid #ccc">
-                    Status
-                  </th>
+                <tr>
+                  <th class="sortable" data-key="machine">Machine</th>
+                  <th class="sortable" data-key="location">Location</th>
+                  <th class="sortable" data-key="date">Date</th>
+                  <th class="sortable" data-key="notes">Notes</th>
+                  <th class="sortable" data-key="status">Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody></tbody>
             </table>
           </div>
         </div>
-
-        <!-- ========================= -->
-        <!--   TAB + FIREBASE SCRIPT   -->
-        <!-- ========================= -->
-
-        <script>
-          // ---------------------------
-          // TAB SWITCHING
-          // ---------------------------
-          document.querySelectorAll(".tab-button").forEach((btn) => {
-            btn.addEventListener("click", () => {
-              const target = btn.dataset.tab;
-
-              document.querySelectorAll(".tab-content").forEach((tab) => {
-                tab.style.display = "none";
-              });
-
-              document.getElementById(target).style.display = "block";
-            });
-          });
-
-          // ---------------------------
-          // FIREBASE SETUP
-          // (Your firebase config must already be loaded above this)
-          // ---------------------------
-          const db = firebase.firestore();
-          const maintenanceRef = db.collection("maintenance");
-
-          // ---------------------------
-          // FORM SUBMIT → FIREBASE
-          // ---------------------------
-          document
-            .getElementById("maintenanceForm")
-            .addEventListener("submit", async (e) => {
-              e.preventDefault();
-
-              const entry = {
-                machine: document.getElementById("machine").value,
-                location: document.getElementById("location").value,
-                date: document.getElementById("date").value,
-                notes: document.getElementById("notes").value,
-                status: document.getElementById("status").value,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-              };
-
-              await maintenanceRef.add(entry);
-
-              document.getElementById("maintenanceForm").reset();
-            });
-
-          // ---------------------------
-          // LIVE TABLE UPDATES
-          // ---------------------------
-          maintenanceRef.orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-            const tbody = document.querySelector("#maintenanceTable tbody");
-            tbody.innerHTML = "";
-
-            snapshot.forEach((doc) => {
-              const d = doc.data();
-              const row = `
-            <tr>
-              <td style="padding:6px; border-bottom:1px solid #ddd;">${d.machine}</td>
-              <td style="padding:6px; border-bottom:1px solid #ddd;">${d.location}</td>
-              <td style="padding:6px; border-bottom:1px solid #ddd;">${d.date}</td>
-              <td style="padding:6px; border-bottom:1px solid #ddd;">${d.notes}</td>
-              <td style="padding:6px; border-bottom:1px solid #ddd;">${d.status}</td>
-            </tr>
-          `;
-              tbody.innerHTML += row;
-            });
-          });
-        </script>
-      </section>
-
-      <!-- Super Admin Card -->
-      <section class="card" id="adminCard" style="display: none">
-        <h2>Super Admin – Create New Admin</h2>
-        <p class="small-text">
-          Only the super admin (<strong>welder.admin@bhs.com</strong>) can
-          create new admin accounts.
-        </p>
-
-        <label>New Admin Email:</label>
-        <input type="email" id="newAdminEmail" />
-
-        <label>New Admin Password:</label>
-        <input type="password" id="newAdminPassword" />
-
-        <button id="createAdminBtn" type="button">Create Admin Account</button>
-        <p class="small-text" id="adminMessage"></p>
-      </section>
-      <section class="card" id="adminCard1" style="display: none">
-        <h2>Delete Account</h2>
-        <input
-          type="email"
-          id="deleteEmail"
-          placeholder="Enter email to delete"
-        />
-        <button id="deleteBtn" type="button">Delete Account</button>
-        <p id="deleteMessage" class="small-text"></p>
       </section>
     </main>
 
-    <!-- Firebase core -->
-    <script type="module" src="/firebase.js"></script>
+    <!-- ========================= -->
+    <!-- FIREBASE + DASHBOARD LOGIC -->
+    <!-- ========================= -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-    <!-- Page script -->
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-      import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-      import {
-        signInWithEmailAndPassword,
-        signOut,
-        onAuthStateChanged,
-        createUserWithEmailAndPassword,
-      } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-      import {
-        ref,
-        onValue,
-        update,
-      } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-      const SUPER_ADMIN_EMAIL = "welder.admin@bhs.com";
-
+    <script>
+      /* ---------------------------------------------------------
+         INSERT YOUR FIREBASE CONFIG HERE
+      --------------------------------------------------------- */
       const firebaseConfig = {
-        apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
-        authDomain: "welding-form.firebaseapp.com",
-        databaseURL: "https://welding-form-default-rtdb.firebaseio.com",
-        projectId: "welding-form",
-        storageBucket: "welding-form.firebasestorage.app",
-        messagingSenderId: "69271735442",
-        appId: "1:69271735442:web:e438afe73f604563d22a4b",
-        measurementId: "G-JSR34FQ59Y",
+        apiKey: "",
+        authDomain: "",
+        databaseURL: "",
+        projectId: "",
+        storageBucket: "",
+        messagingSenderId: "",
+        appId: ""
       };
+      firebase.initializeApp(firebaseConfig);
 
-      // Initialize Firebase
-      const app = initializeApp(firebaseConfig);
-      //const analytics = getAnalytics(app);
-      const auth = getAuth(app);
-      const db = getDatabase(app);
-
+      /* ---------------------------------------------------------
+         AUTH LOGIC
+      --------------------------------------------------------- */
       const loginCard = document.getElementById("loginCard");
       const dashboardCard = document.getElementById("dashboardCard");
-      const adminCard = document.getElementById("adminCard");
-      const adminCard1 = document.getElementById("adminCard1");
-      const authStatus = document.getElementById("authStatus");
-      const loginMessage = document.getElementById("loginMessage");
-      const adminMessage = document.getElementById("adminMessage");
-      const issuesTableBody = document.querySelector("#issuesTable tbody");
-      const searchInput = document.getElementById("searchInput");
-      const tabButtons = document.querySelectorAll(".tab-btn");
-      const tableHeaders = document.querySelectorAll("th.sortable");
 
-      const loginBtn = document.getElementById("loginBtn");
-      const logoutBtn = document.getElementById("logoutBtn");
-      const createAdminBtn = document.getElementById("createAdminBtn");
+      document.getElementById("loginBtn").onclick = () => {
+        const email = loginEmail.value;
+        const pass = loginPassword.value;
 
-      let allIssues = {}; // raw data from Firebase
-      let currentTab = "open"; // 'open' or 'solved'
-      let sortState = { key: null, direction: 1 }; // 1 = asc, -1 = desc
+        firebase.auth().signInWithEmailAndPassword(email, pass)
+          .then(() => {
+            loginCard.style.display = "none";
+            dashboardCard.style.display = "block";
+            authStatus.textContent = "Logged in as " + email;
+          })
+          .catch(err => {
+            loginMessage.textContent = err.message;
+          });
+      };
 
-      loginBtn.addEventListener("click", async () => {
-        loginMessage.textContent = "";
-        const email = document.getElementById("loginEmail").value.trim();
-        const password = document.getElementById("loginPassword").value.trim();
+      document.getElementById("logoutBtn").onclick = () => {
+        firebase.auth().signOut();
+        dashboardCard.style.display = "none";
+        loginCard.style.display = "block";
+        authStatus.textContent = "Not logged in";
+      };
 
-        if (!email || !password) {
-          loginMessage.textContent = "Please enter email and password.";
-          return;
-        }
+      /* ---------------------------------------------------------
+         TAB SWITCHING
+      --------------------------------------------------------- */
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tab = btn.dataset.tab;
 
-        try {
-          await signInWithEmailAndPassword(auth, email, password);
-          loginMessage.textContent = "";
-        } catch (error) {
-          console.error(error);
-          loginMessage.textContent = "Login failed. Check your credentials.";
-        }
-      });
+          document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
 
-      logoutBtn.addEventListener("click", async () => {
-        await signOut(auth);
-      });
-
-      // Auth state listener
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          authStatus.textContent = `Logged in as: ${user.email}`;
-          loginCard.style.display = "none";
-          dashboardCard.style.display = "block";
-
-          if (user.email === SUPER_ADMIN_EMAIL) {
-            adminCard.style.display = "block";
-            adminCard1.style.display = "block";
+          if (tab === "maintenance") {
+            issuesTab.classList.add("hidden");
+            maintenanceTab.classList.remove("hidden");
           } else {
-            adminCard.style.display = "none";
-            adminCard1.style.display = "none";
+            maintenanceTab.classList.add("hidden");
+            issuesTab.classList.remove("hidden");
+          }
+        });
+      });
+
+      /* ---------------------------------------------------------
+         REALTIME DATABASE: MAINTENANCE LOG
+      --------------------------------------------------------- */
+      const rtdb = firebase.database();
+      const maintenanceRef = rtdb.ref("maintenance");
+
+      let maintenanceData = [];
+      let maintSortKey = "timestamp";
+      let maintSortDir = "desc";
+
+      const maintForm = document.getElementById("maintenanceForm");
+      const maintIdInput = document.getElementById("maintId");
+      const maintCancelEdit = document.getElementById("maintCancelEdit");
+
+      maintForm.addEventListener("submit", e => {
+        e.preventDefault();
+
+        const entry = {
+          machine: machine.value.trim(),
+          location: location.value.trim(),
+          date: date.value,
+          notes: notes.value.trim(),
+          status: status.value,
+          timestamp: Date.now()
+        };
+
+        const id = maintIdInput.value;
+        if (id) {
+          maintenanceRef.child(id).update(entry);
+        } else {
+          maintenanceRef.push(entry);
+        }
+
+        maintForm.reset();
+        maintIdInput.value = "";
+        maintCancelEdit.style.display = "none";
+      });
+
+      maintCancelEdit.onclick = () => {
+        maintForm.reset();
+        maintIdInput.value = "";
+        maintCancelEdit.style.display = "none";
+      };
+
+      maintenanceRef.on("value", snapshot => {
+        const data = snapshot.val() || {};
+        maintenanceData = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+        renderMaintenanceTable();
+      });
+
+      document.querySelectorAll("#maintenanceTable th.sortable").forEach(th => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.key;
+          if (maintSortKey === key) {
+            maintSortDir = maintSortDir === "asc" ? "desc" : "asc";
+          } else {
+            maintSortKey = key;
+            maintSortDir = "asc";
+          }
+          renderMaintenanceTable();
+        });
+      });
+
+      const maintSearch = document.getElementById("maintSearch");
+      const maintStatusFilter = document.getElementById("maintStatusFilter");
+      const maintFromDate = document.getElementById("maintFromDate");
+      const maintToDate = document.getElementById("maintToDate");
+
+      [maintSearch, maintStatusFilter, maintFromDate, maintToDate].forEach(el => {
+        el.addEventListener("input", renderMaintenanceTable);
+      });
+
+      function renderMaintenanceTable() {
+        const tbody = document.querySelector("#maintenanceTable tbody");
+        tbody.innerHTML = "";
+
+        let rows = [...maintenanceData];
+
+        const search = maintSearch.value.toLowerCase();
+        const statusFilter = maintStatusFilter.value;
+        const fromDate = maintFromDate.value;
+        const toDate = maintToDate.value;
+
+        rows = rows.filter(r => {
+          const matchesSearch =
+            !search ||
+            r.machine.toLowerCase().includes(search) ||
+            r.notes.toLowerCase().includes(search) ||
+            r.location.toLowerCase().includes(search);
+
+          const matchesStatus = !statusFilter || r.status === statusFilter;
+
+          const dateVal = r.date || "";
+          const afterFrom = !fromDate || dateVal >= fromDate;
+          const beforeTo = !toDate || dateVal <= toDate;
+
+          return matchesSearch && matchesStatus && afterFrom && beforeTo;
+        });
+
+        rows.sort((a, b) => {
+          let va = a[maintSortKey];
+          let vb = b[maintSortKey];
+
+          if (maintSortKey === "timestamp") {
+            va = va || 0;
+            vb = vb || 0;
+          } else {
+            va = (va || "").toString().toLowerCase();
+            vb = (vb || "").toString().toLowerCase();
           }
 
-          subscribeToIssues();
-        } else {
-          authStatus.textContent = "Not logged in";
-          loginCard.style.display = "block";
-          dashboardCard.style.display = "none";
-          adminCard.style.display = "none";
-          adminCard1.style.display = "none";
-          issuesTableBody.innerHTML = "";
-        }
-      });
-
-      // Super admin creates new admin accounts
-      createAdminBtn.addEventListener("click", async () => {
-        adminMessage.textContent = "";
-        const user = auth.currentUser;
-        if (!user || user.email !== SUPER_ADMIN_EMAIL) {
-          adminMessage.textContent =
-            "You are not authorized to create admin accounts.";
-          return;
-        }
-
-        const email = document.getElementById("newAdminEmail").value.trim();
-        const password = document
-          .getElementById("newAdminPassword")
-          .value.trim();
-
-        if (!email || !password) {
-          adminMessage.textContent = "Please enter email and password.";
-          return;
-        }
-
-        try {
-          await createUserWithEmailAndPassword(auth, email, password);
-          adminMessage.textContent = "Admin account created successfully.";
-          document.getElementById("newAdminEmail").value = "";
-          document.getElementById("newAdminPassword").value = "";
-        } catch (error) {
-          console.error(error);
-          adminMessage.textContent =
-            "Error creating admin account: " + error.message;
-        }
-      });
-
-      // Build dynamic issue description
-      function buildIssueDescription(issue) {
-        let parts = [];
-
-        if (issue.stickIssueType) {
-          parts.push(
-            `Stick: ${issue.stickIssueType} ${issue.stickOtherText || ""}`,
-          );
-        }
-        if (issue.migIssueType) {
-          parts.push(`MIG: ${issue.migIssueType} ${issue.migOtherText || ""}`);
-        }
-        if (issue.tigIssueType) {
-          parts.push(`TIG: ${issue.tigIssueType} ${issue.tigOtherText || ""}`);
-        }
-        if (issue.plasmaCutterType || issue.plasmaIssueType) {
-          parts.push(
-            `Plasma (${issue.plasmaCutterType || ""}): ${issue.plasmaIssueType || ""} ${issue.plasmaOtherText || ""}`,
-          );
-        }
-        if (issue.toolState || issue.toolType) {
-          parts.push(
-            `Tool: ${issue.toolState || ""} – ${issue.toolType || ""} ${issue.toolOtherText || ""}`,
-          );
-        }
-
-        return parts.join("<br>");
-      }
-
-      // Render table based on currentTab, search, and sort
-      function renderTable() {
-        issuesTableBody.innerHTML = "";
-
-        const query = searchInput.value.toLowerCase();
-
-        let entries = Object.entries(allIssues).map(([id, issue]) => {
-          return {
-            id,
-            ...issue,
-            issueDetails: buildIssueDescription(issue),
-          };
+          if (va < vb) return maintSortDir === "asc" ? -1 : 1;
+          if (va > vb) return maintSortDir === "asc" ? 1 : -1;
+          return 0;
         });
 
-        // Filter by tab (status)
-        entries = entries.filter((item) => {
-          if (currentTab === "open") return item.status !== "solved";
-          if (currentTab === "solved") return item.status === "solved";
-          return true;
-        });
-
-        // Filter by search
-        if (query) {
-          entries = entries.filter((item) => {
-            const text = (
-              (item.studentName || "") +
-              " " +
-              (item.classPeriod || "") +
-              " " +
-              (item.boothNumber || "") +
-              " " +
-              (item.processType || "") +
-              " " +
-              (item.issueDetails || "") +
-              " " +
-              (item.status || "")
-            ).toLowerCase();
-            return text.includes(query);
-          });
-        }
-
-        // Sort
-        if (sortState.key) {
-          const key = sortState.key;
-          const dir = sortState.direction;
-          entries.sort((a, b) => {
-            const va = (a[key] || "").toString().toLowerCase();
-            const vb = (b[key] || "").toString().toLowerCase();
-            if (va < vb) return -1 * dir;
-            if (va > vb) return 1 * dir;
-            return 0;
-          });
-        }
-
-        // Render rows
-        entries.forEach((item) => {
+        rows.forEach(r => {
           const tr = document.createElement("tr");
 
-          const statusClass =
-            item.status === "solved" ? "status-solved" : "status-open";
-          const statusLabel = item.status === "solved" ? "Solved" : "Open";
-
           tr.innerHTML = `
-        <td>${item.studentName || ""}</td>
-        <td>${item.classPeriod || ""}</td>
-        <td>${item.boothNumber || ""}</td>
-        <td>${item.processType || ""}</td>
-        <td>${item.issueDetails || ""}</td>
-        <td class="${statusClass}">${statusLabel}</td>
-        <td>
-          <button 
-            data-id="${item.id}" 
-            class="toggleStatusBtn"
-            style="background:${item.status === "open" ? "#4CAF50" : "#FF9800"}; color:white;"
-          >
-            ${item.status === "open" ? "Mark Solved" : "Mark Open"}
-          </button>
-        </td>
-      `;
+            <td>${r.machine || ""}</td>
+            <td>${r.location || ""}</td>
+            <td>${r.date || ""}</td>
+            <td>${r.notes || ""}</td>
+            <td>${r.status || ""}</td>
+            <td>
+              <button type="button" class="secondary" data-id="${r.id}" data-action="edit">Edit</button>
+              <button type="button" class="danger" data-id="${r.id}" data-action="delete">Delete</button>
+            </td>
+          `;
 
-          issuesTableBody.appendChild(tr);
+          tbody.appendChild(tr);
         });
 
-        // Attach listeners to toggle buttons
-        document.querySelectorAll(".toggleStatusBtn").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const id = btn.getAttribute("data-id");
-            const issueRef = ref(db, "issues/" + id);
+        tbody.querySelectorAll("button[data-action]").forEach(btn => {
+          const id = btn.dataset.id;
+          const action = btn.dataset.action;
 
-            const current = allIssues[id];
-            const newStatus = current.status === "open" ? "solved" : "open";
+          btn.addEventListener("click", () => {
+            if (action === "edit") {
+              const row = maintenanceData.find(r => r.id === id);
+              if (!row) return;
 
-            try {
-              await update(issueRef, { status: newStatus });
-            } catch (error) {
-              console.error(error);
-              alert("Error updating issue status.");
+              maintIdInput.value = row.id;
+              machine.value = row.machine || "";
+              location.value = row.location || "";
+              date.value = row.date || "";
+              notes.value = row.notes || "";
+              status.value = row.status || "Operational";
+
+              maintCancelEdit.style.display = "inline-block";
+
+              document.querySelector('.tab-btn[data-tab="maintenance"]').click();
+            } else if (action === "delete") {
+              if (confirm("Delete this maintenance entry?")) {
+                maintenanceRef.child(id).remove();
+              }
             }
           });
         });
       }
-
-      // Live search
-      searchInput.addEventListener("input", renderTable);
-
-      // Tabs
-      tabButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          tabButtons.forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          currentTab = btn.getAttribute("data-tab");
-          renderTable();
-        });
-      });
-
-      // Sorting
-      tableHeaders.forEach((th) => {
-        th.addEventListener("click", () => {
-          const key = th.getAttribute("data-key");
-          if (sortState.key === key) {
-            sortState.direction *= -1; // toggle direction
-          } else {
-            sortState.key = key;
-            sortState.direction = 1;
-          }
-          renderTable();
-        });
-      });
-
-      // Subscribe to issues in Realtime Database
-      function subscribeToIssues() {
-        const issuesRef = ref(db, "issues");
-        onValue(issuesRef, (snapshot) => {
-          allIssues = snapshot.val() || {};
-          renderTable();
-        });
-      }
-      const deleteBtn = document.getElementById("deleteBtn");
-      const deleteEmail = document.getElementById("deleteEmail");
-      const deleteMessage = document.getElementById("deleteMessage");
-
-      deleteBtn.addEventListener("click", async () => {
-        const email = deleteEmail.value.trim();
-        deleteMessage.textContent = "";
-
-        if (!email) {
-          deleteMessage.textContent = "Enter an email.";
-          return;
-        }
-
-        try {
-          const res = await fetch("/api/deleteUser", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-email": auth.currentUser.email,
-            },
-            body: JSON.stringify({ email }),
-          });
-
-          const data = await res.json();
-
-          if (data.success) {
-            deleteMessage.textContent = "Account deleted successfully.";
-            deleteEmail.value = "";
-          } else {
-            deleteMessage.textContent = "Error: " + data.error;
-          }
-        } catch (err) {
-          deleteMessage.textContent = "Server error.";
-        }
-      });
-
-      document.querySelectorAll(".tab-button").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const target = btn.dataset.tab;
-
-          document.querySelectorAll(".tab-content").forEach((tab) => {
-            tab.style.display = "none";
-          });
-
-          document.getElementById(target).style.display = "block";
-        });
-      });
-
-      // ---------------------------
-      // FIREBASE SETUP
-      // (Your firebase config must already be loaded above this)
-      // ---------------------------
-      const maintenanceRef = db.collection("maintenance");
-
-      // ---------------------------
-      // FORM SUBMIT → FIREBASE
-      // ---------------------------
-      document
-        .getElementById("maintenanceForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-
-          const entry = {
-            machine: document.getElementById("machine").value,
-            location: document.getElementById("location").value,
-            date: document.getElementById("date").value,
-            notes: document.getElementById("notes").value,
-            status: document.getElementById("status").value,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          };
-
-          await maintenanceRef.add(entry);
-
-          document.getElementById("maintenanceForm").reset();
-        });
-
-      // ---------------------------
-      // LIVE TABLE UPDATES
-      // ---------------------------
-      maintenanceRef.orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        const tbody = document.querySelector("#maintenanceTable tbody");
-        tbody.innerHTML = "";
-
-        snapshot.forEach((doc) => {
-          const d = doc.data();
-          const row = ` <tr> <td style="padding:6px; border-bottom:1px solid #ddd;">${d.machine}</td> <td style="padding:6px; border-bottom:1px solid #ddd;">${d.location}</td> <td style="padding:6px; border-bottom:1px solid #ddd;">${d.date}</td> <td style="padding:6px; border-bottom:1px solid #ddd;">${d.notes}</td> <td style="padding:6px; border-bottom:1px solid #ddd;">${d.status}</td> </tr> `;
-          tbody.innerHTML += row;
-        });
-      });
     </script>
   </body>
 </html>
