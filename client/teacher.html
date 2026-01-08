@@ -4,6 +4,32 @@
     <meta charset="UTF-8" />
     <title>Teacher Dashboard – Welding Shop</title>
     <link rel="stylesheet" href="style.css" />
+    <style>
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin: 16px 0;
+      }
+      .tab-btn {
+        padding: 8px 16px;
+        border: 1px solid #ccc;
+        background: #f5f5f5;
+        cursor: pointer;
+      }
+      .tab-btn.active {
+        background: #2196f3;
+        color: white;
+        border-color: #2196f3;
+      }
+      th.sortable {
+        cursor: pointer;
+      }
+      th.sortable::after {
+        content: " ⇅";
+        font-size: 0.8em;
+        color: #888;
+      }
+    </style>
   </head>
   <body>
     <header>
@@ -21,7 +47,7 @@
         <label>Password:</label>
         <input type="password" id="loginPassword" required />
 
-        <button id="loginBtn">Login</button>
+        <button id="loginBtn" type="button">Login</button>
         <p class="small-text" id="loginMessage"></p>
       </section>
 
@@ -35,16 +61,29 @@
 
         <button class="secondary" id="logoutBtn">Log Out</button>
 
-        <h3 style="margin-top: 16px">Open & Solved Issues</h3>
+        <!-- Search Bar -->
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search issues..."
+          style="width: 100%; padding: 8px; margin: 16px 0; font-size: 16px"
+        />
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="open">Open Issues</button>
+          <button class="tab-btn" data-tab="solved">Solved Issues</button>
+        </div>
+
         <table id="issuesTable">
           <thead>
             <tr>
-              <th>Student</th>
-              <th>Period</th>
-              <th>Booth</th>
-              <th>Process</th>
-              <th>Description</th>
-              <th>Status</th>
+              <th class="sortable" data-key="studentName">Student</th>
+              <th class="sortable" data-key="classPeriod">Period</th>
+              <th class="sortable" data-key="boothNumber">Booth</th>
+              <th class="sortable" data-key="processType">Process</th>
+              <th class="sortable" data-key="issueDetails">Issue Details</th>
+              <th class="sortable" data-key="status">Status</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -66,13 +105,23 @@
         <label>New Admin Password:</label>
         <input type="password" id="newAdminPassword" />
 
-        <button id="createAdminBtn">Create Admin Account</button>
+        <button id="createAdminBtn" type="button">Create Admin Account</button>
         <p class="small-text" id="adminMessage"></p>
+      </section>
+      <section class="card" id="adminCard1" style="display: none">
+        <h2>Delete Account</h2>
+        <input
+          type="email"
+          id="deleteEmail"
+          placeholder="Enter email to delete"
+        />
+        <button id="deleteBtn" type="button">Delete Account</button>
+        <p id="deleteMessage" class="small-text"></p>
       </section>
     </main>
 
     <!-- Firebase core -->
-    <script type="module" src="firebase.js"></script>
+    <script type="module" src="/firebase.js"></script>
 
     <!-- Page script -->
     <script type="module">
@@ -94,17 +143,38 @@
 
       const SUPER_ADMIN_EMAIL = "sb4549@k12.sd.us";
 
+      const firebaseConfig = {
+        apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
+        authDomain: "welding-form.firebaseapp.com",
+        databaseURL: "https://welding-form-default-rtdb.firebaseio.com",
+        projectId: "welding-form",
+        storageBucket: "welding-form.firebasestorage.app",
+        messagingSenderId: "69271735442",
+        appId: "1:69271735442:web:e438afe73f604563d22a4b",
+        measurementId: "G-JSR34FQ59Y"
+      };
+
+
+
       const loginCard = document.getElementById("loginCard");
       const dashboardCard = document.getElementById("dashboardCard");
       const adminCard = document.getElementById("adminCard");
+      const adminCard1 = document.getElementById("adminCard1");
       const authStatus = document.getElementById("authStatus");
       const loginMessage = document.getElementById("loginMessage");
       const adminMessage = document.getElementById("adminMessage");
       const issuesTableBody = document.querySelector("#issuesTable tbody");
+      const searchInput = document.getElementById("searchInput");
+      const tabButtons = document.querySelectorAll(".tab-btn");
+      const tableHeaders = document.querySelectorAll("th.sortable");
 
       const loginBtn = document.getElementById("loginBtn");
       const logoutBtn = document.getElementById("logoutBtn");
       const createAdminBtn = document.getElementById("createAdminBtn");
+
+      let allIssues = {}; // raw data from Firebase
+      let currentTab = "open"; // 'open' or 'solved'
+      let sortState = { key: null, direction: 1 }; // 1 = asc, -1 = desc
 
       loginBtn.addEventListener("click", async () => {
         loginMessage.textContent = "";
@@ -131,6 +201,7 @@
 
       // Auth state listener
       onAuthStateChanged(auth, (user) => {
+        
         if (user) {
           authStatus.textContent = `Logged in as: ${user.email}`;
           loginCard.style.display = "none";
@@ -138,8 +209,10 @@
 
           if (user.email === SUPER_ADMIN_EMAIL) {
             adminCard.style.display = "block";
+            adminCard1.style.display = "block";
           } else {
             adminCard.style.display = "none";
+            adminCard1.style.display = "none";
           }
 
           subscribeToIssues();
@@ -148,6 +221,7 @@
           loginCard.style.display = "block";
           dashboardCard.style.display = "none";
           adminCard.style.display = "none";
+          adminCard1.style.display = "none";
           issuesTableBody.innerHTML = "";
         }
       });
@@ -173,8 +247,6 @@
         }
 
         try {
-          // IMPORTANT: This will create the user using the current session.
-          // In a real production app, you’d use Firebase Admin SDK on a server.
           await createUserWithEmailAndPassword(auth, email, password);
           adminMessage.textContent = "Admin account created successfully.";
           document.getElementById("newAdminEmail").value = "";
@@ -186,65 +258,208 @@
         }
       });
 
+      // Build dynamic issue description
+      function buildIssueDescription(issue) {
+        let parts = [];
+
+        if (issue.stickIssueType) {
+          parts.push(
+            `Stick: ${issue.stickIssueType} ${issue.stickOtherText || ""}`,
+          );
+        }
+        if (issue.migIssueType) {
+          parts.push(`MIG: ${issue.migIssueType} ${issue.migOtherText || ""}`);
+        }
+        if (issue.tigIssueType) {
+          parts.push(`TIG: ${issue.tigIssueType} ${issue.tigOtherText || ""}`);
+        }
+        if (issue.plasmaCutterType || issue.plasmaIssueType) {
+          parts.push(
+            `Plasma (${issue.plasmaCutterType || ""}): ${issue.plasmaIssueType || ""} ${issue.plasmaOtherText || ""}`,
+          );
+        }
+        if (issue.toolState || issue.toolType) {
+          parts.push(
+            `Tool: ${issue.toolState || ""} – ${issue.toolType || ""} ${issue.toolOtherText || ""}`,
+          );
+        }
+
+        return parts.join("<br>");
+      }
+
+      // Render table based on currentTab, search, and sort
+      function renderTable() {
+        issuesTableBody.innerHTML = "";
+
+        const query = searchInput.value.toLowerCase();
+
+        let entries = Object.entries(allIssues).map(([id, issue]) => {
+          return {
+            id,
+            ...issue,
+            issueDetails: buildIssueDescription(issue),
+          };
+        });
+
+        // Filter by tab (status)
+        entries = entries.filter((item) => {
+          if (currentTab === "open") return item.status !== "solved";
+          if (currentTab === "solved") return item.status === "solved";
+          return true;
+        });
+
+        // Filter by search
+        if (query) {
+          entries = entries.filter((item) => {
+            const text = (
+              (item.studentName || "") +
+              " " +
+              (item.classPeriod || "") +
+              " " +
+              (item.boothNumber || "") +
+              " " +
+              (item.processType || "") +
+              " " +
+              (item.issueDetails || "") +
+              " " +
+              (item.status || "")
+            ).toLowerCase();
+            return text.includes(query);
+          });
+        }
+
+        // Sort
+        if (sortState.key) {
+          const key = sortState.key;
+          const dir = sortState.direction;
+          entries.sort((a, b) => {
+            const va = (a[key] || "").toString().toLowerCase();
+            const vb = (b[key] || "").toString().toLowerCase();
+            if (va < vb) return -1 * dir;
+            if (va > vb) return 1 * dir;
+            return 0;
+          });
+        }
+
+        // Render rows
+        entries.forEach((item) => {
+          const tr = document.createElement("tr");
+
+          const statusClass =
+            item.status === "solved" ? "status-solved" : "status-open";
+          const statusLabel = item.status === "solved" ? "Solved" : "Open";
+
+          tr.innerHTML = `
+        <td>${item.studentName || ""}</td>
+        <td>${item.classPeriod || ""}</td>
+        <td>${item.boothNumber || ""}</td>
+        <td>${item.processType || ""}</td>
+        <td>${item.issueDetails || ""}</td>
+        <td class="${statusClass}">${statusLabel}</td>
+        <td>
+          <button 
+            data-id="${item.id}" 
+            class="toggleStatusBtn"
+            style="background:${item.status === "open" ? "#4CAF50" : "#FF9800"}; color:white;"
+          >
+            ${item.status === "open" ? "Mark Solved" : "Mark Open"}
+          </button>
+        </td>
+      `;
+
+          issuesTableBody.appendChild(tr);
+        });
+
+        // Attach listeners to toggle buttons
+        document.querySelectorAll(".toggleStatusBtn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-id");
+            const issueRef = ref(db, "issues/" + id);
+
+            const current = allIssues[id];
+            const newStatus = current.status === "open" ? "solved" : "open";
+
+            try {
+              await update(issueRef, { status: newStatus });
+            } catch (error) {
+              console.error(error);
+              alert("Error updating issue status.");
+            }
+          });
+        });
+      }
+
+      // Live search
+      searchInput.addEventListener("input", renderTable);
+
+      // Tabs
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          tabButtons.forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          currentTab = btn.getAttribute("data-tab");
+          renderTable();
+        });
+      });
+
+      // Sorting
+      tableHeaders.forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.getAttribute("data-key");
+          if (sortState.key === key) {
+            sortState.direction *= -1; // toggle direction
+          } else {
+            sortState.key = key;
+            sortState.direction = 1;
+          }
+          renderTable();
+        });
+      });
+
       // Subscribe to issues in Realtime Database
       function subscribeToIssues() {
         const issuesRef = ref(db, "issues");
         onValue(issuesRef, (snapshot) => {
-          const data = snapshot.val() || {};
-          issuesTableBody.innerHTML = "";
-
-          Object.entries(data).forEach(([id, issue]) => {
-            const tr = document.createElement("tr");
-
-            const statusClass =
-              issue.status === "solved" ? "status-solved" : "status-open";
-            const statusLabel = issue.status === "solved" ? "Solved" : "Open";
-
-            tr.innerHTML = `
-			<td>${issue.studentName || ""}</td>
-			<td>${issue.classPeriod || ""}</td>
-			<td>${issue.boothNumber || ""}</td>
-			<td>${issue.processType || ""}</td>
-
-			<td>${issue.stickIssueType || ""} ${issue.stickOtherText || ""}</td>
-			<td>${issue.migIssueType || ""} ${issue.migOtherText || ""}</td>
-			<td>${issue.tigIssueType || ""} ${issue.tigOtherText || ""}</td>
-
-			<td>${issue.plasmaCutterType || ""}</td>
-			<td>${issue.plasmaIssueType || ""} ${issue.plasmaOtherText || ""}</td>
-
-			<td>${issue.toolState || ""}</td>
-			<td>${issue.toolType || ""} ${issue.toolOtherText || ""}</td>
-
-			<td class="${statusClass}">${statusLabel}</td>
-
-  <td>
-    ${
-      issue.status === "open"
-        ? `<button data-id="${id}" class="solveBtn">Mark Solved</button>`
-        : ""
-    }
-  </td>
-`;
-
-            issuesTableBody.appendChild(tr);
-          });
-
-          // Attach listeners to "Mark Solved" buttons
-          document.querySelectorAll(".solveBtn").forEach((btn) => {
-            btn.addEventListener("click", async () => {
-              const id = btn.getAttribute("data-id");
-              const issueRef = ref(db, "issues/" + id);
-              try {
-                await update(issueRef, { status: "solved" });
-              } catch (error) {
-                console.error(error);
-                alert("Error updating issue status.");
-              }
-            });
-          });
+          allIssues = snapshot.val() || {};
+          renderTable();
         });
       }
+      const deleteBtn = document.getElementById("deleteBtn");
+      const deleteEmail = document.getElementById("deleteEmail");
+      const deleteMessage = document.getElementById("deleteMessage");
+
+      deleteBtn.addEventListener("click", async () => {
+        const email = deleteEmail.value.trim();
+        deleteMessage.textContent = "";
+
+        if (!email) {
+          deleteMessage.textContent = "Enter an email.";
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/deleteUser", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-email": auth.currentUser.email
+            },
+            body: JSON.stringify({ email })
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            deleteMessage.textContent = "Account deleted successfully.";
+            deleteEmail.value = "";
+          } else {
+            deleteMessage.textContent = "Error: " + data.error;
+          }
+        } catch (err) {
+          deleteMessage.textContent = "Server error.";
+        }
+      });
+
     </script>
   </body>
 </html>
