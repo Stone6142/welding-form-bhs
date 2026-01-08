@@ -138,8 +138,6 @@
         update,
       } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-      const auth = window.firebaseAuth;
-      const db = window.firebaseDb;
 
       const SUPER_ADMIN_EMAIL = "sb4549@k12.sd.us";
 
@@ -158,7 +156,7 @@
       const app = initializeApp(firebaseConfig);
       const analytics = getAnalytics(app);
       const auth = getAuth(app);
-
+      const db = getDatabase(app);
 
 
       const loginCard = document.getElementById("loginCard");
