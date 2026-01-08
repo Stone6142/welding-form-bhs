@@ -65,9 +65,8 @@
         <div class="tabs">
           <button class="tab-btn active" data-tab="open">Open Issues</button>
           <button class="tab-btn" data-tab="solved">Solved Issues</button>
-          <button class="tab-btn" data-tab="maintenance">
-            Maintenance Log
-          </button>
+          <button class="tab-btn" data-tab="maintenance">Maintenance Log</button>
+          <button class="tab-btn" data-tab="stock">Stock</button>
         </div>
 
         <!-- ========================= -->
@@ -94,35 +93,10 @@
         <!-- MAINTENANCE LOG TAB -->
         <!-- ========================= -->
         <div id="maintenanceTab" class="tab-content hidden">
-          <div class="card">
+          
             <h2>Machine Maintenance Log</h2>
-
-            <!-- Filters -->
-            <div
-              style="
-                display: flex;
-                gap: 8px;
-                flex-wrap: wrap;
-                margin-bottom: 12px;
-              "
-            >
-              <input
-                type="text"
-                id="maintSearch"
-                placeholder="Search machine or notes..."
-                style="flex: 1; padding: 8px"
-              />
-              <select id="maintStatusFilter" style="padding: 8px">
-                <option value="">All Statuses</option>
-                <option value="Operational">Operational</option>
-                <option value="Needs Service">Needs Service</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Out of Order">Out of Order</option>
-              </select>
-              <input type="date" id="maintFromDate" style="padding: 8px" />
-              <input type="date" id="maintToDate" style="padding: 8px" />
-            </div>
-
+            <div class="card">
+            <h3>Maintenance Form</h3>
             <!-- Form -->
             <form id="maintenanceForm">
               <input type="hidden" id="maintId" />
@@ -150,6 +124,7 @@
               <button type="submit" class="primary" id="maintSaveBtn">
                 Save
               </button>
+              </div>
               <button
                 type="button"
                 class="secondary"
@@ -159,7 +134,35 @@
                 Cancel Edit
               </button>
             </form>
+          <div class="card">
+            <h3>Filters </h3>
+            <!-- Filters -->
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 12px;
+              "
+            >
+              <input
+                type="text"
+                id="maintSearch"
+                placeholder="Search machine or notes..."
+                style="flex: 1; padding: 8px"
+              />
+              <select id="maintStatusFilter" style="padding: 8px">
+                <option value="">All Statuses</option>
+                <option value="Operational">Operational</option>
+                <option value="Needs Service">Needs Service</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Out of Order">Out of Order</option>
+              </select>
+              <input type="date" id="maintFromDate" style="padding: 8px" />
+              <input type="date" id="maintToDate" style="padding: 8px" />
+            </div>
           </div>
+
 
           <div class="card">
             <h2>Maintenance Records</h2>
@@ -180,6 +183,57 @@
           </div>
         </div>
       </section>
+      <!-- ========== STOCK TAB ========== -->
+      <div id="stockTab" class="tab-content hidden">
+        <div class="card">
+          <h2>Stock / Inventory</h2>
+
+          <!-- Search -->
+          <input
+            type="text"
+            id="stockSearch"
+            placeholder="Search parts..."
+            style="width: 100%; padding: 8px; margin-bottom: 16px;"
+          />
+
+          <!-- Add / Edit Form -->
+          <form id="stockForm">
+            <input type="hidden" id="stockId" />
+
+            <label>Part Type</label>
+            <input type="text" id="stockPartType" required />
+
+            <label>Machine Type</label>
+            <input type="text" id="stockMachineType" required />
+
+            <label>Part Number</label>
+            <input type="text" id="stockPartNumber" required />
+
+            <label>Amount</label>
+            <input type="number" id="stockAmount" min="0" required />
+
+            <button type="submit" class="primary">Save Part</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Inventory List</h2>
+
+          <table id="stockTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-key="partType">Part Type</th>
+                <th class="sortable" data-key="machineType">Machine Type</th>
+                <th class="sortable" data-key="partNumber">Part Number</th>
+                <th class="sortable" data-key="amount">Amount</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
 
       <!-- Super Admin Card -->
       <section class="card" id="adminCard" style="display: none">
@@ -577,11 +631,13 @@
           btn.classList.add("active");
 
           if (tab === "maintenance") {
+            document.getElementById("searchInput").classList.add("hidden");
             document.getElementById("issuesTab").classList.add("hidden");
             document.getElementById("maintenanceTab").classList.remove("hidden");
           } else {
             document.getElementById("maintenanceTab").classList.add("hidden");
             document.getElementById("issuesTab").classList.remove("hidden");
+            document.getElementById("searchInput").classList.remove("hidden");
           }
         });
       });
@@ -781,6 +837,203 @@
           });
         });
       }
+
+
+
+      // =====================
+      // STOCK TAB SETUP
+      // =====================
+
+      // Realtime Database reference
+      const stockRef = ref(db, "inventory/stock");
+
+      // Local cache
+      let stockData = [];
+      let stockSortKey = "partType";
+      let stockSortDir = "asc";
+
+      // Elements
+      const stockForm = document.getElementById("stockForm");
+      const stockIdInput = document.getElementById("stockId");
+      const stockSearch = document.getElementById("stockSearch");
+
+      // =====================
+      // UTIL: Create ID from machineType + partType
+      // =====================
+      function makeStockKey(machineType, partType) {
+        const cleanMachine = machineType.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
+        const cleanPart = partType.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
+        return `${cleanMachine}-${cleanPart}`;
+      }
+
+      // =====================
+      // FORM SUBMIT (CREATE / UPDATE)
+      // =====================
+      stockForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const partType = document.getElementById("stockPartType").value.trim();
+        const machineType = document.getElementById("stockMachineType").value.trim();
+        const partNumber = document.getElementById("stockPartNumber").value.trim();
+        const amount = parseInt(document.getElementById("stockAmount").value, 10) || 0;
+
+        if (!partType || !machineType) return;
+
+        const newKey = makeStockKey(machineType, partType);
+        const oldKey = stockIdInput.value;
+
+        const entry = {
+          partType,
+          machineType,
+          partNumber,
+          amount,
+          updatedAt: Date.now()
+        };
+
+        if (oldKey && oldKey !== newKey) {
+          remove(ref(db, `inventory/stock/${oldKey}`)).then(() => {
+            set(ref(db, `inventory/stock/${newKey}`), entry);
+          });
+        } else {
+          set(ref(db, `inventory/stock/${newKey}`), entry);
+        }
+
+        stockForm.reset();
+        stockIdInput.value = "";
+      });
+
+      // =====================
+      // LIVE LISTENER
+      // =====================
+      onValue(stockRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        stockData = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+        renderStockTable();
+      });
+
+      // =====================
+      // SORTING
+      // =====================
+      document.querySelectorAll("#stockTable th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.key;
+
+          if (stockSortKey === key) {
+            stockSortDir = stockSortDir === "asc" ? "desc" : "asc";
+          } else {
+            stockSortKey = key;
+            stockSortDir = "asc";
+          }
+
+          renderStockTable();
+        });
+      });
+
+      // =====================
+      // SEARCH
+      // =====================
+      stockSearch.addEventListener("input", renderStockTable);
+
+      // =====================
+      // RENDER TABLE
+      // =====================
+      function renderStockTable() {
+        const tbody = document.querySelector("#stockTable tbody");
+        tbody.innerHTML = "";
+
+        let rows = [...stockData];
+
+        const search = stockSearch.value.toLowerCase();
+
+        rows = rows.filter((r) => {
+          return (
+            !search ||
+            (r.partType || "").toLowerCase().includes(search) ||
+            (r.machineType || "").toLowerCase().includes(search) ||
+            (r.partNumber || "").toLowerCase().includes(search)
+          );
+        });
+
+        rows.sort((a, b) => {
+          let va = a[stockSortKey];
+          let vb = b[stockSortKey];
+
+          if (stockSortKey === "amount") {
+            va = Number(va) || 0;
+            vb = Number(vb) || 0;
+          } else {
+            va = (va || "").toString().toLowerCase();
+            vb = (vb || "").toString().toLowerCase();
+          }
+
+          if (va < vb) return stockSortDir === "asc" ? -1 : 1;
+          if (va > vb) return stockSortDir === "asc" ? 1 : -1;
+          return 0;
+        });
+
+        rows.forEach((r) => {
+          const tr = document.createElement("tr");
+
+          tr.innerHTML = `
+            <td>${r.partType || ""}</td>
+            <td>${r.machineType || ""}</td>
+            <td>${r.partNumber || ""}</td>
+            <td>${r.amount ?? 0}</td>
+            <td>
+              <button class="secondary" data-id="${r.id}" data-action="inc">+</button>
+              <button class="secondary" data-id="${r.id}" data-action="dec">-</button>
+              <button class="secondary" data-id="${r.id}" data-action="edit">Edit</button>
+              <button class="danger" data-id="${r.id}" data-action="delete">Delete</button>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll("button[data-action]").forEach((btn) => {
+          const id = btn.dataset.id;
+          const action = btn.dataset.action;
+          const row = stockData.find((r) => r.id === id);
+
+          btn.addEventListener("click", () => {
+            if (!row) return;
+
+            if (action === "inc") {
+              update(ref(db, `inventory/stock/${id}`), {
+                amount: (row.amount || 0) + 1,
+                updatedAt: Date.now()
+              });
+            }
+
+            if (action === "dec") {
+              const current = row.amount || 0;
+              if (current <= 0) return;
+              update(ref(db, `inventory/stock/${id}`), {
+                amount: current - 1,
+                updatedAt: Date.now()
+              });
+            }
+
+            if (action === "edit") {
+              stockIdInput.value = id;
+              document.getElementById("stockPartType").value = row.partType || "";
+              document.getElementById("stockMachineType").value = row.machineType || "";
+              document.getElementById("stockPartNumber").value = row.partNumber || "";
+              document.getElementById("stockAmount").value = row.amount ?? 0;
+
+              document.querySelector('.tab-btn[data-tab="stock"]').click();
+            }
+
+            if (action === "delete") {
+              if (confirm("Delete this part from stock?")) {
+                remove(ref(db, `inventory/stock/${id}`));
+              }
+            }
+          });
+        });
+      }
+
+      
     </script>
   </body>
 </html>
