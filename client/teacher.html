@@ -266,7 +266,7 @@
           placeholder="Search tanks..."
           style="width: 100%; padding: 8px; margin-bottom: 16px;"
         />
-        <a href="teacher/tanks" >Tank Chart</a>
+        <a href="/tanks" >Tank Chart</a>
         <table id="tankTable">
           <thead>
             <tr>
@@ -1243,12 +1243,13 @@
             <td style="${psiColor}">${r.psi ?? 0}</td>
             <td>
               <button class="secondary" data-id="${r.id}" data-action="edit">Edit</button>
+              <button class="danger" data-id="${r.id}" data-action="delete">Delete</button>
             </td>
           `;
 
           tbody.appendChild(tr);
         });
-
+      
         tbody.querySelectorAll("button[data-action]").forEach((btn) => {
           const id = btn.dataset.id;
           const action = btn.dataset.action;
@@ -1264,7 +1265,14 @@
               document.getElementById("tankPSI").value = row.psi ?? 0;
 
               document.querySelector('.tab-btn[data-tab="stock"]').click();
+              
             }
+            if (action === "delete") {
+              if (confirm("Are you sure you want to delete this tank?")) {
+                remove(ref(db, `inventory/tanks/${id}`));
+              }
+            }
+
           });
         });
       }
