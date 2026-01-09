@@ -2,30 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Welding Shop – Student Issue Report</title>
+    <title>Student Issue Report – Welding Shop</title>
     <link rel="stylesheet" href="style.css" />
-    <style>
-      .hidden {
-        display: none;
-      }
-      .divider {
-        margin-top: 20px;
-        padding-top: 10px;
-        border-top: 2px solid #ccc;
-        font-weight: bold;
-        font-size: 1.1em;
-      }
-    </style>
   </head>
-
   <body>
     <header>
       <h1>Welding Shop – Student Issue Report</h1>
+      <div class="right">
+        <span>For equipment problems, fill out this form.</span>
+      </div>
     </header>
 
     <main>
       <section class="card">
         <h2>Report an Issue</h2>
+        <p class="small-text">
+          Use this form to report problems with welders, plasma cutters, tools,
+          or safety equipment in your booth.
+        </p>
 
         <form id="studentForm">
           <label>Student Name:</label>
@@ -33,9 +27,27 @@
 
           <label>Class Period:</label>
           <input type="text" id="classPeriod" required />
-
-          <label>Booth Number:</label>
-          <input type="text" id="boothNumber" required />
+          <!---
+      <label>Booth Number:</label>
+      <input type="text" id="boothNumber" required>
+      --->
+          <label for="boothnumber">Booth Number:</label>
+          <select name="boothNumber" id="boothNumber">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option></option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="table">table</option>
+            <option value="Workshop">Workshop</option>
+            <option value="other">other</option>
+          </select>
 
           <label>Process / Equipment:</label>
           <select id="processType" required>
@@ -47,39 +59,42 @@
             <option>Tools / Safety Equipment</option>
           </select>
 
-          <!-- Divider (hidden until a process is selected) -->
-          <div id="issueDivider" class="divider hidden">
-            Equipment Issue Details
-          </div>
+          <!---<label>Describe the Issue:</label>
+      <textarea id="issueDescription" required></textarea>--->
 
-          <!-- STICK SECTION -->
-          <div id="stickIssues" class="hidden">
-            <label>Select Stick Welder Issue:</label>
-            <select id="stickIssueType">
+          <!-- TIG Issue Options -->
+          <div id="tigIssues" class="hidden">
+            <label>Select TIG Welder Issue:</label>
+            <select id="tigIssueType">
               <option value="">Select...</option>
-              <option>Clamps Not Securing</option>
-              <option>Wiring</option>
-              <option>ON/OFF Switch</option>
-              <option>Amperage not changing</option>
-              <option>Arc keeps cutting out</option>
-              <option>Arc wandering or unstable</option>
-              <option>Hard to strike the arc</option>
-              <option>Welder won’t turn on</option>
-              <option>Leads getting hot</option>
-              <option>Exposed wire</option>
+              <option>Tungsten</option>
+              <option>Cup/Lense</option>
+              <option>Settings</option>
+              <option>Body</option>
+              <option>Back Cup</option>
+              <option>Filler</option>
+              <option>Arc starts but cuts out</option>
+              <option>Gas leak at torch or regulator</option>
+              <option>Torch overheating</option>
+              <option>Foot pedal not controlling amperage</option>
+              <option>Damaged cables</option>
+              <option>Inconsistent amperage output</option>
               <option>Burning smell</option>
-              <option>Smoke coming from the machine</option>
+              <option>Torch handle too hot to hold</option>
+              <option>Sparks coming from machine body</option>
+              <option>Gas smell (leak)</option>
               <option>Machine vibrating or making unusual noises</option>
               <option>Other</option>
             </select>
+
             <textarea
-              id="stickOtherText"
+              id="tigOtherText"
               class="hidden"
               placeholder="Describe the issue..."
             ></textarea>
           </div>
 
-          <!-- MIG SECTION -->
+          <!-- MIG Issue Options -->
           <div id="migIssues" class="hidden">
             <label>Select MIG Welder Issue:</label>
             <select id="migIssueType">
@@ -105,6 +120,7 @@
               <option>Machine vibrating or rattling</option>
               <option>Other</option>
             </select>
+
             <textarea
               id="migOtherText"
               class="hidden"
@@ -112,38 +128,36 @@
             ></textarea>
           </div>
 
-          <!-- TIG SECTION -->
-          <div id="tigIssues" class="hidden">
-            <label>Select TIG Welder Issue:</label>
-            <select id="tigIssueType">
+          <!-- SMAW (Stick) Issue Options -->
+          <div id="stickIssues" class="hidden">
+            <label>Select Stick Welder Issue:</label>
+
+            <select id="stickIssueType">
               <option value="">Select...</option>
-              <option>Tungsten</option>
-              <option>Cup/Lense</option>
-              <option>Settings</option>
-              <option>Body</option>
-              <option>Back Cup</option>
-              <option>Filler</option>
-              <option>Arc starts but cuts out</option>
-              <option>Gas leak at torch or regulator</option>
-              <option>Torch overheating</option>
-              <option>Foot pedal not controlling amperage</option>
-              <option>Damaged cables</option>
-              <option>Inconsistent amperage output</option>
+              <option>Clamps Not Securing</option>
+              <option>Wiring</option>
+              <option>ON/OFF Switch</option>
+              <option>Amperage not changing</option>
+              <option>Arc keeps cutting out</option>
+              <option>Arc wandering or unstable</option>
+              <option>Hard to strike the arc</option>
+              <option>Welder won’t turn on</option>
+              <option>Leads getting hot</option>
+              <option>Exposed wire</option>
               <option>Burning smell</option>
-              <option>Torch handle too hot to hold</option>
-              <option>Sparks coming from machine body</option>
-              <option>Gas smell (leak)</option>
+              <option>Smoke coming from the machine</option>
               <option>Machine vibrating or making unusual noises</option>
               <option>Other</option>
             </select>
+
             <textarea
-              id="tigOtherText"
+              id="stickOtherText"
               class="hidden"
               placeholder="Describe the issue..."
             ></textarea>
           </div>
 
-          <!-- PLASMA SECTION -->
+          <!-- Plasma Cutter Options -->
           <div id="plasmaIssues" class="hidden">
             <label>Which Cutter:</label>
             <select id="plasmaCutterType">
@@ -173,6 +187,7 @@
               <option>Power cuts in and out</option>
               <option>Other</option>
             </select>
+
             <textarea
               id="plasmaOtherText"
               class="hidden"
@@ -180,7 +195,7 @@
             ></textarea>
           </div>
 
-          <!-- TOOLS SECTION -->
+          <!-- Tools & Safety Equipment -->
           <div id="toolIssues" class="hidden">
             <label>State of Tools:</label>
             <select id="toolState">
@@ -203,6 +218,7 @@
               <option>Metal Chop Saw/Chop Saw Wheel</option>
               <option>Other</option>
             </select>
+
             <textarea
               id="toolOtherText"
               class="hidden"
@@ -213,12 +229,38 @@
           <button type="submit">Submit Issue</button>
         </form>
 
-        <p id="studentMessage"></p>
+        <p class="small-text" id="studentMessage"></p>
       </section>
     </main>
 
     <!-- Firebase core -->
-    <script type="module" src="firebase.js"></script>
+    <script type="module" src="firebase.js">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+      // TODO: Replace with your real Firebase config
+      const firebaseConfig = {
+          apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
+          authDomain: "welding-form.firebaseapp.com",
+          databaseURL: "https://welding-form-default-rtdb.firebaseio.com",
+          projectId: "welding-form",
+          storageBucket: "welding-form.firebasestorage.app",
+          messagingSenderId: "69271735442",
+          appId: "1:69271735442:web:e438afe73f604563d22a4b",
+          measurementId: "G-JSR34FQ59Y"
+        };
+
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getDatabase(app);
+      // Expose to window so other scripts can use them
+      window.firebaseApp = app;
+      window.firebaseAuth = auth;
+      window.firebaseDb = db;
+    </script>
 
     <!-- Page script -->
     <script type="module">
@@ -232,44 +274,84 @@
 
       const form = document.getElementById("studentForm");
       const msg = document.getElementById("studentMessage");
-      const processTypeSelect = document.getElementById("processType");
-      const issueDivider = document.getElementById("issueDivider");
 
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        msg.textContent = "";
+
+        const studentName = document.getElementById("studentName").value.trim();
+        const classPeriod = document.getElementById("classPeriod").value.trim();
+        const boothNumber = document.getElementById("boothNumber").value.trim();
+        const processType = document.getElementById("processType").value;
+
+        if (!studentName || !classPeriod || !boothNumber || !processType) {
+          msg.textContent = "Please fill out all fields.";
+          return;
+        }
+
+        try {
+          const issuesRef = ref(db, "issues");
+          await push(issuesRef, {
+            studentName,
+            classPeriod,
+            boothNumber,
+            processType,
+            status: "open",
+            createdAt: serverTimestamp(),
+            stickIssueType: stickIssueType.value || null,
+            stickOtherText: stickOtherText.value.trim() || null,
+            migIssueType: migIssueType.value || null,
+            migOtherText: migOtherText.value.trim() || null,
+
+            tigIssueType: tigIssueType.value || null,
+            tigOtherText: tigOtherText.value.trim() || null,
+
+            plasmaCutterType: plasmaCutterType.value || null,
+            plasmaIssueType: plasmaIssueType.value || null,
+            plasmaOtherText: plasmaOtherText.value.trim() || null,
+
+            toolState: toolState.value || null,
+            toolType: toolType.value || null,
+            toolOtherText: toolOtherText.value.trim() || null,
+          });
+
+          form.reset();
+          msg.textContent = "Issue submitted successfully.";
+        } catch (error) {
+          console.error(error);
+          msg.textContent = "There was an error submitting the issue.";
+        }
+      });
       // Section references
-      const stickIssuesDiv = document.getElementById("stickIssues");
       const migIssuesDiv = document.getElementById("migIssues");
       const tigIssuesDiv = document.getElementById("tigIssues");
       const plasmaIssuesDiv = document.getElementById("plasmaIssues");
       const toolIssuesDiv = document.getElementById("toolIssues");
 
-      // Issue type + "Other" fields
-      const stickIssueType = document.getElementById("stickIssueType");
-      const stickOtherText = document.getElementById("stickOtherText");
-
+      // MIG
       const migIssueType = document.getElementById("migIssueType");
       const migOtherText = document.getElementById("migOtherText");
 
+      // TIG
       const tigIssueType = document.getElementById("tigIssueType");
       const tigOtherText = document.getElementById("tigOtherText");
 
-      const plasmaCutterType = document.getElementById("plasmaCutterType");
+      // Plasma
       const plasmaIssueType = document.getElementById("plasmaIssueType");
       const plasmaOtherText = document.getElementById("plasmaOtherText");
 
-      const toolState = document.getElementById("toolState");
+      // Tools
       const toolType = document.getElementById("toolType");
       const toolOtherText = document.getElementById("toolOtherText");
 
       // Hide all sections
       function hideAllMachineSections() {
-        stickIssuesDiv.classList.add("hidden");
-        migIssuesDiv.classList.add("hidden");
-        tigIssuesDiv.classList.add("hidden");
-        plasmaIssuesDiv.classList.add("hidden");
-        toolIssuesDiv.classList.add("hidden");
-        issueDivider.classList.add("hidden");
+        stickIssues.classList.add("hidden");
+        migIssues.classList.add("hidden");
+        tigIssues.classList.add("hidden");
+        plasmaIssues.classList.add("hidden");
+        toolIssues.classList.add("hidden");
 
-        stickOtherText.classList.add("hidden");
         migOtherText.classList.add("hidden");
         tigOtherText.classList.add("hidden");
         plasmaOtherText.classList.add("hidden");
@@ -277,40 +359,29 @@
       }
 
       // Process selection logic
-      processTypeSelect.addEventListener("change", () => {
+      processType.addEventListener("change", () => {
         hideAllMachineSections();
 
-        if (processTypeSelect.value !== "") {
-          issueDivider.classList.remove("hidden");
-        }
-
-        switch (processTypeSelect.value) {
+        switch (processType.value) {
           case "SMAW (Stick)":
-            stickIssuesDiv.classList.remove("hidden");
+            stickIssues.classList.remove("hidden");
             break;
           case "GMAW (MIG)":
-            migIssuesDiv.classList.remove("hidden");
+            migIssues.classList.remove("hidden");
             break;
           case "GTAW (TIG)":
-            tigIssuesDiv.classList.remove("hidden");
+            tigIssues.classList.remove("hidden");
             break;
           case "Plasma Cutter":
-            plasmaIssuesDiv.classList.remove("hidden");
+            plasmaIssues.classList.remove("hidden");
             break;
           case "Tools / Safety Equipment":
-            toolIssuesDiv.classList.remove("hidden");
+            toolIssues.classList.remove("hidden");
             break;
         }
       });
 
       // "Other" field logic
-      stickIssueType.addEventListener("change", () =>
-        stickOtherText.classList.toggle(
-          "hidden",
-          stickIssueType.value !== "Other",
-        ),
-      );
-
       migIssueType.addEventListener("change", () =>
         migOtherText.classList.toggle("hidden", migIssueType.value !== "Other"),
       );
@@ -329,59 +400,6 @@
       toolType.addEventListener("change", () =>
         toolOtherText.classList.toggle("hidden", toolType.value !== "Other"),
       );
-
-      // Submit to Firebase
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        msg.textContent = "";
-
-        const studentName = document.getElementById("studentName").value.trim();
-        const classPeriod = document.getElementById("classPeriod").value.trim();
-        const boothNumber = document.getElementById("boothNumber").value.trim();
-        const processType = processTypeSelect.value;
-
-        if (!studentName || !classPeriod || !boothNumber || !processType) {
-          msg.textContent = "Please fill out all required fields.";
-          return;
-        }
-
-        try {
-          const issuesRef = ref(db, "issues");
-          await push(issuesRef, {
-            studentName,
-            classPeriod,
-            boothNumber,
-            processType,
-
-            stickIssueType: stickIssueType.value || null,
-            stickOtherText: stickOtherText.value.trim() || null,
-
-            migIssueType: migIssueType.value || null,
-            migOtherText: migOtherText.value.trim() || null,
-
-            tigIssueType: tigIssueType.value || null,
-            tigOtherText: tigOtherText.value.trim() || null,
-
-            plasmaCutterType: plasmaCutterType.value || null,
-            plasmaIssueType: plasmaIssueType.value || null,
-            plasmaOtherText: plasmaOtherText.value.trim() || null,
-
-            toolState: toolState.value || null,
-            toolType: toolType.value || null,
-            toolOtherText: toolOtherText.value.trim() || null,
-
-            status: "open",
-            createdAt: serverTimestamp(),
-          });
-
-          form.reset();
-          hideAllMachineSections();
-          msg.textContent = "Issue submitted successfully.";
-        } catch (error) {
-          console.error(error);
-          msg.textContent = "There was an error submitting the issue.";
-        }
-      });
     </script>
   </body>
 </html>
