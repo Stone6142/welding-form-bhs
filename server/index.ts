@@ -138,7 +138,7 @@ app.post("/api/deleteUser", verifySuperAdmin, async (req: Request, res: Response
   });
 
   app.get("/teacher/tanks", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "..", "client", "tankchart.html"));
+    res.sendFile(path.resolve(__dirname, "..", "client", "tanks.html"));
   });
 
   app.get("/test", (req, res) => {
