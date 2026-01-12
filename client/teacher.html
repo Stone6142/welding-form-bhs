@@ -345,7 +345,7 @@
                 <th data-col="machineType" class="sortable">Machine Type</th>
                 <th data-col="machineName" class="sortable">Name</th>
                 <th class="sortable">Serial</th>
-                <th data-col="machineLocation"class="sortable">Location</th>
+                <th data-col="machineLocation"class="sortable">Booth Number</th>
                 <th data-col="machineTank" class="sortable">Tank Name</th>
                 <th data-col="PSI" class="sortable">PSI</th>
                 <th>Actions</th>
@@ -418,22 +418,28 @@
 
       const SUPER_ADMIN_EMAIL = "welder.admin@bhs.com";
 
-      const firebaseConfig = {
-        apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
-        authDomain: "welding-form.firebaseapp.com",
-        databaseURL: "https://welding-form-default-rtdb.firebaseio.com",
-        projectId: "welding-form",
-        storageBucket: "welding-form.firebasestorage.app",
-        messagingSenderId: "69271735442",
-        appId: "1:69271735442:web:e438afe73f604563d22a4b",
-        measurementId: "G-JSR34FQ59Y",
-      };
+      async function loadFirebaseConfig() {
+        const res = await fetch("/api/firebaseConfig");
+        const config = await res.json();
+        return config;
+      }
 
+      loadFirebaseConfig().then((config) => {
+        
+        window.firebaseAppConfig = config
+      
+        startApp();
+      });
+
+    loadFirebaseConfig();
+
+    function startApp(){
       // Initialize Firebase
-      const app = initializeApp(firebaseConfig);
       //const analytics = getAnalytics(app);
+      const app = initializeApp(window.firebaseAppConfig);
       const auth = getAuth(app);
       const db = getDatabase(app);
+      
 
       const loginCard = document.getElementById("loginCard");
       const dashboardCard = document.getElementById("dashboardCard");
@@ -1537,6 +1543,7 @@
           });
         });
       }
+    }
 
 
       

@@ -13,7 +13,7 @@ const __dirname = dirname(__filename);
 
 admin.initializeApp({
   credential: admin.credential.cert(
-    JSON.parse(process.env.FIREBASE_ADMIN_KEY as string)
+    JSON.parse(process.env.FIREBASE_ADMIN_KEY as string),
   ),
 });
 
@@ -61,71 +61,108 @@ function verifySuperAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 // List users (first 1000)
-app.get("/api/users", verifySuperAdmin, async (_req: Request, res: Response) => {
-  try {
-    const list = await admin.auth().listUsers(1000);
-    const users = list.users.map((u) => ({
-      uid: u.uid,
-      email: u.email,
-      createdAt: u.metadata.creationTime,
-      lastLoginAt: u.metadata.lastSignInTime,
-    }));
-    res.json({ users });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+app.get(
+  "/api/users",
+  verifySuperAdmin,
+  async (_req: Request, res: Response) => {
+    try {
+      const list = await admin.auth().listUsers(1000);
+      const users = list.users.map((u) => ({
+        uid: u.uid,
+        email: u.email,
+        createdAt: u.metadata.creationTime,
+        lastLoginAt: u.metadata.lastSignInTime,
+      }));
+      res.json({ users });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+);
 
 // Create user
-app.post("/api/createUser", verifySuperAdmin, async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: "Email and password required." });
+app.post(
+  "/api/createUser",
+  verifySuperAdmin,
+  async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+    if (!email || !password)
+      return res.status(400).json({ error: "Email and password required." });
 
-  try {
-    const user = await admin.auth().createUser({ email, password });
-    res.json({ success: true, uid: user.uid });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+    try {
+      const user = await admin.auth().createUser({ email, password });
+      res.json({ success: true, uid: user.uid });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+);
 
 // Update email
-app.post("/api/updateEmail", verifySuperAdmin, async (req: Request, res: Response) => {
-  const { uid, email } = req.body;
-  if (!uid || !email) return res.status(400).json({ error: "UID and new email required." });
+app.post(
+  "/api/updateEmail",
+  verifySuperAdmin,
+  async (req: Request, res: Response) => {
+    const { uid, email } = req.body;
+    if (!uid || !email)
+      return res.status(400).json({ error: "UID and new email required." });
 
-  try {
-    await admin.auth().updateUser(uid, { email });
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+    try {
+      await admin.auth().updateUser(uid, { email });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+);
 
 // Update password
-app.post("/api/updatePassword", verifySuperAdmin, async (req: Request, res: Response) => {
-  const { uid, password } = req.body;
-  if (!uid || !password) return res.status(400).json({ error: "UID and new password required." });
+app.post(
+  "/api/updatePassword",
+  verifySuperAdmin,
+  async (req: Request, res: Response) => {
+    const { uid, password } = req.body;
+    if (!uid || !password)
+      return res.status(400).json({ error: "UID and new password required." });
 
-  try {
-    await admin.auth().updateUser(uid, { password });
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+    try {
+      await admin.auth().updateUser(uid, { password });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+);
 
 // Delete user
-app.post("/api/deleteUser", verifySuperAdmin, async (req: Request, res: Response) => {
-  const { uid } = req.body;
-  if (!uid) return res.status(400).json({ error: "UID required." });
+app.post(
+  "/api/deleteUser",
+  verifySuperAdmin,
+  async (req: Request, res: Response) => {
+    const { uid } = req.body;
+    if (!uid) return res.status(400).json({ error: "UID required." });
 
-  try {
-    await admin.auth().deleteUser(uid);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
+    try {
+      await admin.auth().deleteUser(uid);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+);
+
+// Firebase client config endpoint
+app.get("/api/firebaseConfig", (req, res) => {
+  res.status(200).json({
+    apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
+    authDomain: "welding-form.firebaseapp.com",
+    databaseURL: "https://welding-form-default-rtdb.firebaseio.com",
+    projectId: "welding-form",
+    storageBucket: "welding-form.firebasestorage.app",
+    messagingSenderId: "69271735442",
+    appId: "1:69271735442:web:e438afe73f604563d22a4b",
+    measurementId: "G-JSR34FQ59Y",
+  });
 });
 
 (async () => {

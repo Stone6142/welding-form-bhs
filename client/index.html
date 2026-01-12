@@ -36,7 +36,6 @@
           <select name="boothNumber" id="boothNumber">
             <option value="1">1</option>
             <option value="2">2</option>
-            <option></option>
             <option value="3">3</option>
             <option value="4">4</option>
             <option value="5">5</option>
@@ -45,9 +44,9 @@
             <option value="8">8</option>
             <option value="9">9</option>
             <option value="10">10</option>
-            <option value="table">table</option>
+            <option value="Table">Table</option>
             <option value="Workshop">Workshop</option>
-            <option value="other">other</option>
+            <option value="Other">Other</option>
           </select>
 
           <label>Process / Equipment:</label>
@@ -234,34 +233,7 @@
       </section>
     </main>
 
-    <!-- Firebase core -->
-    <script type="module" src="firebase.js">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-      import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-      // TODO: Replace with your real Firebase config
-      const firebaseConfig = {
-          apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
-          authDomain: "welding-form.firebaseapp.com",
-          databaseURL: "https://welding-form-default-rtdb.firebaseio.com",
-          projectId: "welding-form",
-          storageBucket: "welding-form.firebasestorage.app",
-          messagingSenderId: "69271735442",
-          appId: "1:69271735442:web:e438afe73f604563d22a4b",
-          measurementId: "G-JSR34FQ59Y"
-        };
-
-
-      // Initialize Firebase
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const db = getDatabase(app);
-      // Expose to window so other scripts can use them
-      window.firebaseApp = app;
-      window.firebaseAuth = auth;
-      window.firebaseDb = db;
-    </script>
+   
 
     <!-- Page script -->
     <script type="module">
@@ -271,7 +243,31 @@
         serverTimestamp,
       } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-      const db = window.firebaseDb;
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+
+      async function loadFirebaseConfig() {
+          const res = await fetch("/api/firebaseConfig");
+          return await res.json();
+        }
+
+        loadFirebaseConfig().then((config) => {
+          window.firebaseAppConfig = config
+
+          int();
+        });
+
+
+      function int(){
+      // Initialize Firebase
+      const app = initializeApp(firebaseAppConfig);
+      const auth = getAuth(app);
+      const db = getDatabase(app);
+      
+
+      
 
       const form = document.getElementById("studentForm");
       const msg = document.getElementById("studentMessage");
@@ -401,6 +397,7 @@
       toolType.addEventListener("change", () =>
         toolOtherText.classList.toggle("hidden", toolType.value !== "Other"),
       );
+      }
     </script>
   </body>
 </html>
