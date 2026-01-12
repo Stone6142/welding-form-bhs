@@ -165,6 +165,7 @@ app.post("/api/firebaseConfig", (req, res) => {
   });
 });
 
+
 (async () => {
   const server = createServer(app);
 
