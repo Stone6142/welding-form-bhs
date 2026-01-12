@@ -152,7 +152,7 @@ app.post(
 );
 
 // Firebase client config endpoint
-app.get("/api/firebaseConfig", (req, res) => {
+app.post("/api/firebaseConfig", (req, res) => {
   res.status(200).json({
     apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
     authDomain: "welding-form.firebaseapp.com",
