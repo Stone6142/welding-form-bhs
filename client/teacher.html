@@ -419,7 +419,7 @@
       const SUPER_ADMIN_EMAIL = "welder.admin@bhs.com";
 
       async function loadFirebaseConfig() {
-        const res = await fetch("/api/firebaseConfig");
+        const res = await fetch("https://696556b50015a3075944.sfo.appwrite.run/api/firebaseConfig");
         const config = await res.json();
         return config;
       }
@@ -724,7 +724,7 @@
         }
 
         try {
-          const res = await fetch("/api/deleteUser", {
+          const res = await fetch("https://696556b50015a3075944.sfo.appwrite.run/api/firebaseConfig/api/deleteUser", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
