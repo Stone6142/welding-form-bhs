@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <title>Teacher Dashboard – Welding Shop</title>
     <link rel="stylesheet" href="style.css" />
-
+    <link rel="icon" href="teacher.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
     <style>
       /* Additional small styles for sorting arrows */
       th.sortable {
@@ -65,8 +66,11 @@
         <div class="tabs">
           <button class="tab-btn active" data-tab="open">Open Issues</button>
           <button class="tab-btn" data-tab="solved">Solved Issues</button>
-          <button class="tab-btn" data-tab="maintenance">Maintenance Log</button>
+          <button class="tab-btn" data-tab="maintenance">Maintenance Form</button>
+          <button class="tab-btn" data-tab="maintenanceLog">Maintenance Log</button>
           <button class="tab-btn" data-tab="stock">Stock</button>
+          <button class="tab-btn" data-tab="booths">Booth Overview</button>
+          
         </div>
 
         <!-- ========================= -->
@@ -92,7 +96,7 @@
         <!-- ========================= -->
         <!-- MAINTENANCE LOG TAB -->
         <!-- ========================= -->
-        <div id="maintenanceTab" class="tab-content hidden">
+        <div id="maintenanceTab" class="tab-content hidden card">
           
             <h2>Machine Maintenance Log</h2>
             <div class="card">
@@ -182,7 +186,71 @@
             </table>
           </div>
         </div>
-      </section>
+
+      <!-- ========================= -->
+      <!-- MAINTENANCE LOG (HISTORY) TAB -->
+      <!-- ========================= -->
+      <div id="maintenanceLogTab" class="tab-content hidden card">
+        
+        <h2>Maintenance Log (Full History)</h2>
+        
+        <div class="card">
+          <h3>Filters</h3>
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+
+            <!-- Search -->
+            <input
+              type="text"
+              id="logSearch"
+              placeholder="Search machine, notes, or location..."
+              style="flex:1; padding:8px"
+            />
+
+            <!-- Status Filter -->
+            <select id="logStatusFilter" style="padding:8px">
+              <option value="">All Statuses</option>
+              <option value="Operational">Operational</option>
+              <option value="Needs Service">Needs Service</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Out of Order">Out of Order</option>
+            </select>
+
+            <!-- Technician Filter -->
+            <input
+              type="text"
+              id="logTechFilter"
+              placeholder="Filter by technician..."
+              style="padding:8px"
+            />
+
+            <!-- Date Range -->
+            <input type="date" id="logFromDate" style="padding:8px" />
+            <input type="date" id="logToDate" style="padding:8px" />
+
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>All Maintenance Records</h3>
+          <table id="maintenanceLogTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-key="machine">Machine</th>
+                <th class="sortable" data-key="location">Location</th>
+                <th class="sortable" data-key="date">Date</th>
+                <th class="sortable" data-key="notes">Notes</th>
+                <th class="sortable" data-key="status">Status</th>
+                <th class="sortable" data-key="tech">Technician</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+    
+      </div>
+
+      
       <!-- ========== STOCK TAB ========== -->
       <div id="stockTab" class="tab-content hidden">
         <div class="card">
@@ -203,11 +271,11 @@
             <input type="text" id="stockPartNumber" required />
 
             <label>Amount</label>
-            <input type="number" id="stockAmount" min="0" required />
+            <input type="number" id="stockAmount" required />
 
             <button type="submit" class="primary">Save Part</button>
           </form>
-        </div>
+        
 
         <div class="card">
           <h2>Inventory List</h2>
@@ -266,7 +334,7 @@
           placeholder="Search tanks..."
           style="width: 100%; padding: 8px; margin-bottom: 16px;"
         />
-        <button href="tankchart.html" >Tank Chart</button>
+        <a href="/tanks" >Tank Chart</a>
         <table id="tankTable">
           <thead>
             <tr>
@@ -279,7 +347,82 @@
           <tbody></tbody>
         </table>
       </div>
+        </div>
 
+
+      <!-- MACHINE TAB -->
+      <div id="machinesTab" class="tab-content hidden">
+
+        <div class="card">
+          <h2>Add / Edit Machine</h2>
+
+          <form id="machineForm">
+            <input type="hidden" id="machineId">
+
+            <label>Machine</label>
+            <select id="machineType" required>
+              <option value="">Select Type</option>
+              <option value="Precision TIG 225">Precision TIG 225</option>
+              <option value="350 MP Power Mig">350 MP Power Mig</option>
+              <option value="350 MP Power Mig - TIG CONVERSION">350 MP Power Mig - TIG CONVERSION</option>
+              <option value="Powermax 45 Plasma Cutter">Powermax 45 Plasma Cutter</option>
+            </select>
+
+            <label>Machine Name</label>
+            <select id="machineName" required>
+              <option value="">Loading...</option>
+            </select>
+
+            <label>Serial Number</label>
+            <input type="text" id="serialNumber" required>
+
+            <label>Location</label>
+            <select id="machineLocation" required>
+              <option value="">Select Location</option>
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="TABLE">TABLE</option>
+              <option value="BACKHALLWAY">BACKHALLWAY</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+
+            <label>Tank Name</label>
+            <select id="machineTank">
+              <option value="">Select Tank</option>
+            </select>
+
+            <button type="submit" class="primary">Save Machine</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Machine List</h2>
+
+          <table id="machineTable">
+            <thead>
+              <tr>
+                <th data-col="machineType" class="sortable">Machine Type</th>
+                <th data-col="machineName" class="sortable">Name</th>
+                <th class="sortable">Serial</th>
+                <th data-col="machineLocation"class="sortable">Location</th>
+                <th data-col="machineTank" class="sortable">Tank Name</th>
+                <th data-col="PSI" class="sortable">PSI</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+      </div>
 
 
       <!-- Super Admin Card -->
@@ -309,6 +452,7 @@
         <button id="deleteBtn" type="button">Delete Account</button>
         <p id="deleteMessage" class="small-text"></p>
       </section>
+      
     </main>
 
     <!-- ========================= -->
@@ -696,23 +840,56 @@
 
           if (tab === "maintenance") {
             document.getElementById("maintenanceTab").classList.remove("hidden");
+            maintSortKey = "machine";
+            maintSortDir = "asc";
+            renderMaintenanceTable();
           }
 
           if (tab === "stock") {
             document.getElementById("stockTab").classList.remove("hidden");
             document.getElementById("tankTab").classList.remove("hidden");
             document.getElementById("tankTab1").classList.remove("hidden");
+            stockSortKey = "amount"
+            stockSortDir = "asc"
+            tankSortKey = "psi";
+            tankSortDir = "asc";
+            renderTankTable();
+            renderStockTable();
           }
+          if (tab === "booths") {
+            document.getElementById("machinesTab").classList.remove("hidden");
+            sortMachineTableByLocation();
+          }
+          if (tab === "maintenanceLog") {
+            document.getElementById("maintenanceLogTab").classList.remove("hidden");
+            logSortKey = "date";
+            logSortDir = "-1";
+            renderMaintenanceLogTable();
+          }
+
+
         });
       });
 
+      function getLoggedInTech() {
+        const text = authStatus.textContent || "";
+        return text.replace("Logged in as:", "").trim();
+      }
+
+
+      function formatDate(dateStr) {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString("en-US");
+      }
 
       // =====================
       // REALTIME DATABASE SETUP
       // =====================
       const maintenanceRef = ref(db, "maintenance");
+      const maintenanceHistoryRef = ref(db, "maintenanceHistory"); // ⭐ NEW
 
       let maintenanceData = [];
+      let maintenanceHistoryData = []; // ⭐ NEW
       let maintSortKey = "timestamp";
       let maintSortDir = "desc";
 
@@ -725,25 +902,29 @@
 
       maintForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        console.log(status.value)
+        const techEmail = getLoggedInTech(); // Email Logger
+
         const entry = {
           machine: machine.value.trim(),
           location: location.value.trim(),
           date: date.value,
           notes: notes.value.trim(),
           status: status.value,
+          tech: techEmail,      
           timestamp: Date.now(),
         };
+
 
         const id = maintIdInput.value;
 
         if (id) {
-          // UPDATE (v9 syntax)
           update(ref(db, `maintenance/${id}`), entry);
         } else {
-          // CREATE (v9 syntax)
           push(maintenanceRef, entry);
         }
+
+        // ⭐ ALWAYS push to history
+        push(maintenanceHistoryRef, entry);
 
         maintForm.reset();
         maintIdInput.value = "";
@@ -757,7 +938,7 @@
       };
 
       // =====================
-      // LIVE LISTENER (v9 syntax)
+      // LIVE LISTENER (MAIN TABLE)
       // =====================
       onValue(maintenanceRef, (snapshot) => {
         const data = snapshot.val() || {};
@@ -769,24 +950,37 @@
       });
 
       // =====================
+      // LIVE LISTENER (HISTORY TABLE)
+      // =====================
+      onValue(maintenanceHistoryRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        maintenanceHistoryData = Object.entries(data).map(([id, val]) => ({
+          id,
+          ...val,
+        }));
+      });
+
+      // =====================
       // SORTING
       // =====================
-      document
-        .querySelectorAll("#maintenanceTable th.sortable")
-        .forEach((th) => {
-          th.addEventListener("click", () => {
-            const key = th.dataset.key;
+      document.querySelectorAll("#maintenanceTable th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.key;
 
-            if (maintSortKey === key) {
-              maintSortDir = maintSortDir === "asc" ? "desc" : "asc";
-            } else {
-              maintSortKey = key;
-              maintSortDir = "asc";
-            }
-
-            renderMaintenanceTable();
-          });
+          if (maintSortKey === key) {
+            // User clicked same column → reset to machine sort
+            maintSortKey = "machine";
+            maintSortDir = "asc";
+          } else {
+            // User clicked a new column → sort that column ASC
+            maintSortKey = key;
+            maintSortDir = "asc";
+          }
+          
+          renderMaintenanceTable();
         });
+      });
+
 
       // =====================
       // FILTERING
@@ -796,11 +990,9 @@
       const maintFromDate = document.getElementById("maintFromDate");
       const maintToDate = document.getElementById("maintToDate");
 
-      [maintSearch, maintStatusFilter, maintFromDate, maintToDate].forEach(
-        (el) => {
-          el.addEventListener("input", renderMaintenanceTable);
-        },
-      );
+      [maintSearch, maintStatusFilter, maintFromDate, maintToDate].forEach((el) => {
+        el.addEventListener("input", renderMaintenanceTable);
+      });
 
       // =====================
       // RENDER TABLE
@@ -811,7 +1003,6 @@
 
         let rows = [...maintenanceData];
 
-        // Filtering
         const search = maintSearch.value.toLowerCase();
         const statusFilter = maintStatusFilter.value;
         const fromDate = maintFromDate.value;
@@ -833,7 +1024,6 @@
           return matchesSearch && matchesStatus && afterFrom && beforeTo;
         });
 
-        // Sorting
         rows.sort((a, b) => {
           let va = a[maintSortKey];
           let vb = b[maintSortKey];
@@ -851,26 +1041,27 @@
           return 0;
         });
 
-        // Render rows
         rows.forEach((r) => {
           const tr = document.createElement("tr");
-
+          let formattedDate = formatDate(r.date);
           tr.innerHTML = `
             <td>${r.machine || ""}</td>
             <td>${r.location || ""}</td>
-            <td>${r.date || ""}</td>
+            <td>${formattedDate || ""}</td>
             <td>${r.notes || ""}</td>
             <td>${r.status || ""}</td>
             <td>
-              <button type="button" class="secondary" data-id="${r.id}" data-action="edit">Edit</button>
-              <button type="button" class="danger" data-id="${r.id}" data-action="delete">Delete</button>
+              <button type="button" class="secondary" data-id="${r.id}" data-action="edit"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" class="danger" data-id="${r.id}" data-action="delete"><i class="fa-regular fa-trash-can"></i></button>
+              <button type="button" class="secondary" data-machine="${r.machine}" data-action="viewHistory"><i class="fa-solid fa-clock-rotate-left"></i></button>
             </td>
           `;
-
           tbody.appendChild(tr);
         });
 
-        // Edit/Delete handlers
+        // =====================
+        // BUTTON HANDLERS
+        // =====================
         tbody.querySelectorAll("button[data-action]").forEach((btn) => {
           const id = btn.dataset.id;
           const action = btn.dataset.action;
@@ -878,6 +1069,11 @@
           btn.addEventListener("click", () => {
             if (action === "edit") {
               const row = maintenanceData.find((r) => r.id === id);
+              document.getElementById("maintenanceForm").scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              });
+
               if (!row) return;
 
               maintIdInput.value = row.id;
@@ -889,9 +1085,7 @@
 
               maintCancelEdit.style.display = "inline-block";
 
-              document
-                .querySelector('.tab-btn[data-tab="maintenance"]')
-                .click();
+              document.querySelector('.tab-btn[data-tab="maintenance"]').click();
             }
 
             if (action === "delete") {
@@ -899,10 +1093,143 @@
                 remove(ref(db, `maintenance/${id}`));
               }
             }
+
+            // ⭐ NEW — VIEW HISTORY BUTTON
+            if (action === "viewHistory") {
+              const machineName = btn.dataset.machine;
+
+              // Switch to Maintenance Log tab
+              document.querySelector('.tab-btn[data-tab="maintenanceLog"]').click();
+
+              // Apply filter
+              document.getElementById("logSearch").value = machineName;
+
+              // Re-render log table
+              renderMaintenanceLogTable();
+
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }
           });
         });
       }
+      
 
+      // =====================
+      // MAINTENANCE LOG SORT STATE
+      // =====================
+      let logSortKey = "machine";
+      let logSortDir = "asc";
+
+      // =====================
+      // MAINTENANCE LOG FILTER LISTENERS
+      // =====================
+      [
+        document.getElementById("logSearch"),
+        document.getElementById("logStatusFilter"),
+        document.getElementById("logTechFilter"),
+        document.getElementById("logFromDate"),
+        document.getElementById("logToDate")
+      ].forEach(el => {
+        if (el) el.addEventListener("input", renderMaintenanceLogTable);
+      });
+
+      // =====================
+      // MAINTENANCE LOG SORTING (HEADER CLICKS)
+      // =====================
+      document.querySelectorAll("#maintenanceLogTable th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.key;
+
+          if (logSortKey === key) {
+            logSortDir = logSortDir === "asc" ? "desc" : "asc";
+          } else {
+            logSortKey = key;
+            logSortDir = "asc";
+          }
+
+          renderMaintenanceLogTable();
+        });
+      });
+
+      // =====================
+      // MAINTENANCE LOG TAB RENDERER
+      // =====================
+      function renderMaintenanceLogTable() {
+        const tbody = document.querySelector("#maintenanceLogTable tbody");
+        if (!tbody) return;
+
+        tbody.innerHTML = "";
+
+        let rows = [...maintenanceHistoryData];
+
+        // Filters
+        const search = document.getElementById("logSearch").value.toString().toLowerCase();
+        const status = document.getElementById("logStatusFilter").value;
+        const tech = document.getElementById("logTechFilter").value.toLowerCase();
+        const from = document.getElementById("logFromDate").value;
+        const to = document.getElementById("logToDate").value;
+
+        rows = rows.filter((r) => {
+          const machine = (r.machine || "").toString().toLowerCase();
+          const notes = (r.notes || "").toString().toLowerCase();
+          const location = (r.location || "").toString().toLowerCase();
+
+          let matchesSearch;
+
+          if (search.length === 1) {
+            matchesSearch = machine=== search || location=== search;
+          } else {
+            matchesSearch =
+              !search ||
+              machine.includes(search) ||
+              location.includes(search) ||
+              notes.includes(search);
+          }
+
+
+
+          const matchesStatus = !status || r.status === status;
+          const matchesTech = !tech || r.tech?.toLowerCase().includes(tech);
+
+          const dateVal = r.date || "";
+          const afterFrom = !from || dateVal >= from;
+          const beforeTo = !to || dateVal <= to;
+
+          return matchesSearch && matchesStatus && matchesTech && afterFrom && beforeTo;
+        });
+
+        // Sorting
+        rows.sort((a, b) => {
+          let va = a[logSortKey] || "";
+          let vb = b[logSortKey] || "";
+
+          va = va.toString().toLowerCase();
+          vb = vb.toString().toLowerCase();
+
+          if (va < vb) return logSortDir === "asc" ? -1 : 1;
+          if (va > vb) return logSortDir === "asc" ? 1 : -1;
+          return 0;
+        });
+
+        // Render rows
+        rows.forEach((r) => {
+          const tr = document.createElement("tr");
+          let formattedDate = formatDate(r.date);
+          tr.innerHTML = `
+            <td>${r.machine}</td>
+            <td>${r.location}</td>
+            <td>${formattedDate}</td>
+            <td>${r.notes}</td>
+            <td>${r.status}</td>
+            <td>${r.tech || ""}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+
+      
+      
 
 
       // =====================
@@ -989,7 +1316,6 @@
             stockSortKey = key;
             stockSortDir = "asc";
           }
-
           renderStockTable();
         });
       });
@@ -1183,7 +1509,7 @@
             tankSortKey = key;
             tankSortDir = "asc";
           }
-
+          
           renderTankTable();
         });
       });
@@ -1243,12 +1569,13 @@
             <td style="${psiColor}">${r.psi ?? 0}</td>
             <td>
               <button class="secondary" data-id="${r.id}" data-action="edit">Edit</button>
+              <button class="danger" data-id="${r.id}" data-action="delete">Delete</button>
             </td>
           `;
 
           tbody.appendChild(tr);
         });
-
+      
         tbody.querySelectorAll("button[data-action]").forEach((btn) => {
           const id = btn.dataset.id;
           const action = btn.dataset.action;
@@ -1264,11 +1591,232 @@
               document.getElementById("tankPSI").value = row.psi ?? 0;
 
               document.querySelector('.tab-btn[data-tab="stock"]').click();
+              
             }
+            if (action === "delete") {
+              if (confirm("Are you sure you want to delete this tank?")) {
+                remove(ref(db, `inventory/tanks/${id}`));
+              }
+            }
+
           });
         });
       }
 
+
+      /// Machine Location Tab
+
+      function loadMachineNames() {
+        const dropdown = document.getElementById("machineName");
+
+        onValue(ref(db, "maintenance"), (snapshot) => {
+          const data = snapshot.val() || {};
+
+          dropdown.innerHTML = `<option value="">Select Machine</option>`;
+
+          Object.entries(data).forEach(([id, entry]) => {
+            if (entry.machine) {
+              dropdown.innerHTML += `<option value="${entry.machine}">${entry.machine}</option>`;
+            }
+          });
+        });
+      }
+      document.getElementById("machineForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById("machineId").value || 
+                   document.getElementById("machineName").value.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+
+        const machineData = {
+          machineType: document.getElementById("machineType").value,
+          machineName: document.getElementById("machineName").value,
+          serialNumber: document.getElementById("serialNumber").value,
+          location: document.getElementById("machineLocation").value,
+          tankName: document.getElementById("machineTank").value,
+          updatedAt: Date.now()
+        };
+
+        set(ref(db, `inventory/machines/${id}`), machineData);
+
+        document.getElementById("machineForm").reset();
+        document.getElementById("machineId").value = "";
+      });
+
+      
+
+      loadMachineNames();
+      function loadMachineTable() {
+        const tbody = document.querySelector("#machineTable tbody");
+
+        // Load both machines and tanks
+        Promise.all([
+          get(ref(db, "inventory/machines")),
+          get(ref(db, "inventory/tanks"))
+        ]).then(([machineSnap, tankSnap]) => {
+          const machines = machineSnap.val() || {};
+          const tanks = tankSnap.val() || {};
+
+          tbody.innerHTML = "";
+
+          Object.entries(machines).forEach(([id, m]) => {
+            const tr = document.createElement("tr");
+
+            // ⭐ PART 1 — Find the tank PSI
+            let psi = "-";
+            Object.values(tanks).forEach((t) => {
+              if (t.tankName === m.tankName) {
+                psi = t.psi ?? "-";
+              }
+            });
+              
+                
+            // Build the row
+            tr.innerHTML = `
+              <td>${m.machineType}</td>
+              <td>${m.machineName}</td>
+              <td>${m.serialNumber}</td>
+              <td>${m.location}</td>
+              <td>${m.tankName || "-"}</td>
+              <td>${psi}</td>
+              <td>
+                <button class="secondary" data-id="${id}" data-action="edit"> <i class="fa-solid fa-pen"></i> </button>
+                <button class="danger" data-id="${id}" data-action="delete"> <i class="fa-regular fa-trash-can"></i> </button>
+              </td>
+            `;
+
+            tbody.appendChild(tr);
+          });
+
+          attachMachineActions();
+        });
+        makeTableSortable("machineTable");
+
+      }
+
+
+      loadMachineTable();
+
+      function attachMachineActions() {
+        const tbody = document.querySelector("#machineTable tbody");
+
+        tbody.querySelectorAll("button[data-action]").forEach((btn) => {
+          const id = btn.dataset.id;
+          const action = btn.dataset.action;
+
+          btn.addEventListener("click", () => {
+            if (action === "edit") {
+              get(ref(db, `inventory/machines/${id}`)).then((snap) => {
+                const m = snap.val();
+                if (!m) return;
+
+                document.getElementById("machineId").value = id;
+                document.getElementById("machineType").value = m.machineType;
+                document.getElementById("machineName").value = m.machineName;
+                document.getElementById("serialNumber").value = m.serialNumber;
+                document.getElementById("machineLocation").value = m.location;
+                document.getElementById("machineTank").value = m.tankName || "";
+                //document.querySelector('.tab-btn[data-tab="machines"]').click();
+              });
+            }
+
+            if (action === "delete") {
+              if (confirm("Delete this machine?")) {
+                remove(ref(db, `inventory/machines/${id}`));
+              }
+            }
+          });
+        });
+      }
+      function loadTankNames() {
+        const dropdown = document.getElementById("machineTank");
+
+        onValue(ref(db, "inventory/tanks"), (snapshot) => {
+          const data = snapshot.val() || {};
+
+          dropdown.innerHTML = `
+            <option value="No Tank">No Tank Assigned</option>
+            <option value="Shop Air">Shop Air</option>
+          `;
+
+          Object.entries(data).forEach(([id, tankData]) => {
+            const tankName = tankData.tankName || id; // fallback if missing
+            const psi = tankData.psi ?? "-";
+
+            dropdown.innerHTML += `
+              <option value="${tankName}">
+                ${tankName} (${psi} PSI)
+              </option>
+            `;
+          });
+        });
+      }
+
+      loadTankNames();
+
+      //machine table sorting
+      function makeTableSortable(tableId) {
+        const table = document.getElementById(tableId);
+        const headers = table.querySelectorAll("th[data-col]");
+        let sortState = {};
+
+        headers.forEach((header) => {  
+          header.style.cursor = "pointer";
+
+          header.addEventListener("click", () => {
+            const col = header.dataset.col;
+            const tbody = table.querySelector("tbody");
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+
+            // Toggle sort direction
+            sortState[col] = sortState[col] === "asc" ? "desc" : "asc";
+            const direction = sortState[col];
+
+            rows.sort((a, b) => {
+              const aText = a.querySelector(`td:nth-child(${header.cellIndex + 1})`).innerText.toLowerCase();
+              const bText = b.querySelector(`td:nth-child(${header.cellIndex + 1})`).innerText.toLowerCase();
+
+              if (aText < bText) return direction === "asc" ? -1 : 1;
+              if (aText > bText) return direction === "asc" ? 1 : -1;
+              return 0;
+            });
+
+            // Re-append sorted rows
+            rows.forEach((row) => tbody.appendChild(row));
+          });
+        });
+      }
+      function sortMachineTableByLocation() {
+        const table = document.getElementById("machineTable");
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        rows.sort((a, b) => {
+          const aText = a.children[3].innerText.trim(); // location column
+          const bText = b.children[3].innerText.trim();
+
+          const aNum = parseInt(aText, 10);
+          const bNum = parseInt(bText, 10);
+
+          const aIsNum = !isNaN(aNum);
+          const bIsNum = !isNaN(bNum);
+
+          // Numbers always come first
+          if (aIsNum && !bIsNum) return -1;
+          if (!aIsNum && bIsNum) return 1;
+
+          // Numeric sort
+          if (aIsNum && bIsNum) return aNum - bNum;
+
+          // Alphabetical for non-numbers
+          return aText.localeCompare(bText);
+        });
+
+        rows.forEach((row) => tbody.appendChild(row));
+      }
+
+
+
+      
 
       
     </script>

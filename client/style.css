@@ -54,9 +54,7 @@ label {
   font-size: 14px;
 }
 
-input,
-select,
-textarea {
+input,   select, textarea {
   width: 100%;
   margin-top: 4px;
   padding: 8px;
@@ -156,8 +154,7 @@ table {
   font-size: 13px;
 }
 
-th,
-td {
+th, td {
   border: 1px solid #333;
   padding: 6px 8px;
   text-align: left;
