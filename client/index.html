@@ -401,6 +401,20 @@
       toolType.addEventListener("change", () =>
         toolOtherText.classList.toggle("hidden", toolType.value !== "Other"),
       );
+
+      function loadLocations() {
+        const dropdown = document.getElementById("boothNumber");
+
+        onValue(ref(db, "extras/locations"), (snapshot) => {
+          const data = snapshot.val() || {};
+
+          dropdown.innerHTML = `<option value="">Select Location</option>`;
+
+          Object.values(data).forEach((loc) => {
+            dropdown.innerHTML += `<option value="${loc}">${loc}</option>`;
+          });
+        });
+      }
     </script>
   </body>
 </html>

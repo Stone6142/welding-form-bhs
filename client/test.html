@@ -101,7 +101,54 @@
         <!-- ========================= -->
         <div id="maintenanceTab" class="tab-content hidden card">
           
-            <h2>Machine Maintenance Log</h2>
+            
+
+          <div class="card">
+            <h2>Maintenance Records</h2>
+
+            <table id="maintenanceTable">
+              <div class="card">
+                <h3>Filters </h3>
+                <!-- Filters -->
+                <div
+                  style="
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                    margin-bottom: 12px;
+                  "
+                >
+                  <input
+                    type="text"
+                    id="maintSearch"
+                    placeholder="Search machine or notes..."
+                    style="flex: 1; padding: 8px"
+                  />
+                  <select id="maintStatusFilter" style="padding: 8px">
+                    <option value="">All Statuses</option>
+                    <option value="Operational">Operational</option>
+                    <option value="Needs Service">Needs Service</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Out of Order">Out of Order</option>
+                    <option value="Needs Consumables">Needs Consumables</option>
+                  </select>
+                  <input type="date" id="maintFromDate" style="padding: 8px" />
+                  <input type="date" id="maintToDate" style="padding: 8px" />
+                </div>
+              <thead>
+                <tr>
+                  <th class="sortable" data-key="machine">Machine</th>
+                  <th class="sortable" data-key="location">Location</th>
+                  <th class="sortable" data-key="date">Date</th>
+                  <th class="sortable" data-key="notes">Notes</th>
+                  <th class="sortable" data-key="status">Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <h2>Machine Maintenance Log</h2>
             <div class="card">
             <h3>Maintenance Form</h3>
             <!-- Form -->
@@ -119,13 +166,14 @@
 
               <label>Notes / Maintenance Performed</label>
               <textarea id="notes" required></textarea>
-
+              
               <label>Status</label>
               <select id="status">
                 <option>Operational</option>
                 <option>Needs Service</option>
                 <option>In Progress</option>
                 <option>Out of Order</option>
+                <option>Needs Consumables</option>
               </select>
 
               <button type="submit" class="primary" id="maintSaveBtn">
@@ -141,53 +189,8 @@
                 Cancel Edit
               </button>
             </form>
-          <div class="card">
-            <h3>Filters </h3>
-            <!-- Filters -->
-            <div
-              style="
-                display: flex;
-                gap: 8px;
-                flex-wrap: wrap;
-                margin-bottom: 12px;
-              "
-            >
-              <input
-                type="text"
-                id="maintSearch"
-                placeholder="Search machine or notes..."
-                style="flex: 1; padding: 8px"
-              />
-              <select id="maintStatusFilter" style="padding: 8px">
-                <option value="">All Statuses</option>
-                <option value="Operational">Operational</option>
-                <option value="Needs Service">Needs Service</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Out of Order">Out of Order</option>
-              </select>
-              <input type="date" id="maintFromDate" style="padding: 8px" />
-              <input type="date" id="maintToDate" style="padding: 8px" />
-            </div>
           </div>
 
-
-          <div class="card">
-            <h2>Maintenance Records</h2>
-
-            <table id="maintenanceTable">
-              <thead>
-                <tr>
-                  <th class="sortable" data-key="machine">Machine</th>
-                  <th class="sortable" data-key="location">Location</th>
-                  <th class="sortable" data-key="date">Date</th>
-                  <th class="sortable" data-key="notes">Notes</th>
-                  <th class="sortable" data-key="status">Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
         </div>
 
       <!-- ========================= -->
@@ -352,80 +355,64 @@
       </div>
         </div>
 
+        <!-- MACHINE TAB -->
+        <div id="machinesTab" class="tab-content hidden">
 
-      <!-- MACHINE TAB -->
-      <div id="machinesTab" class="tab-content hidden">
+          <div class="card">
+            <h2>Add / Edit Machine</h2>
 
-        <div class="card">
-          <h2>Add / Edit Machine</h2>
+            <form id="machineForm">
+              <input type="hidden" id="machineId">
 
-          <form id="machineForm">
-            <input type="hidden" id="machineId">
+              <label>Machine Type</label>
+              <select id="machineType" required>
+                <option value="">Loading Types...</option>
+              </select>
 
-            <label>Machine</label>
-            <select id="machineType" required>
-              <option value="">Select Type</option>
-              <option value="Precision TIG 225">Precision TIG 225</option>
-              <option value="350 MP Power Mig">350 MP Power Mig</option>
-              <option value="350 MP Power Mig - TIG CONVERSION">350 MP Power Mig - TIG CONVERSION</option>
-              <option value="Powermax 45 Plasma Cutter">Powermax 45 Plasma Cutter</option>
-            </select>
+              <label>Machine Name</label>
+              <select id="machineName" required>
+                <option value="">Loading Names...</option>
+              </select>
 
-            <label>Machine Name</label>
-            <select id="machineName" required>
-              <option value="">Loading...</option>
-            </select>
+              <label>Serial Number</label>
+              <input type="text" id="serialNumber" required>
 
-            <label>Serial Number</label>
-            <input type="text" id="serialNumber" required>
+              <label>Location</label>
+              <select id="machineLocation" required>
+                <option value="">Loading Locations...</option>
+              </select>
 
-            <label>Location</label>
-            <select id="machineLocation" required>
-              <option value="">Select Location</option>
-              <option value="0">0</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-              <option value="TABLE">TABLE</option>
-              <option value="BACKHALLWAY">BACKHALLWAY</option>
-              <option value="OTHER">OTHER</option>
-            </select>
+              <label>Tank Name</label>
+              <select id="machineTank">
+                <option value="">Select Tank</option>
+              </select>
 
-            <label>Tank Name</label>
-            <select id="machineTank">
-              <option value="">Select Tank</option>
-            </select>
+              <button type="submit" class="primary">Save Machine</button>
+            </form>
+          </div>
 
-            <button type="submit" class="primary">Save Machine</button>
-          </form>
+          <div class="card">
+            <h2>Machine List</h2>
+
+            <table id="machineTable">
+              <thead>
+                <tr>
+                  <th data-col="machineType" class="sortable">Machine Type</th>
+                  <th data-col="machineName" class="sortable">Name</th>
+                  <th class="sortable">Serial</th>
+                  <th data-col="machineLocation" class="sortable">Location</th>
+                  <th data-col="machineTank" class="sortable">Tank Name</th>
+                  <th data-col="PSI" class="sortable">PSI</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
         </div>
 
-        <div class="card">
-          <h2>Machine List</h2>
-
-          <table id="machineTable">
-            <thead>
-              <tr>
-                <th data-col="machineType" class="sortable">Machine Type</th>
-                <th data-col="machineName" class="sortable">Name</th>
-                <th class="sortable">Serial</th>
-                <th data-col="machineLocation"class="sortable">Location</th>
-                <th data-col="machineTank" class="sortable">Tank Name</th>
-                <th data-col="PSI" class="sortable">PSI</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-      </div>
+      
 
         <!-- Supervisor Management + Trial Edit Review -->
         <section class="tab-content hidden" id="supervisor">
@@ -474,6 +461,35 @@
           </table>
 
           <hr />
+
+          <section class="card">
+            <h2>Manage Machine Types & Locations</h2>
+            <p class="small-text">Supervisors can add or remove machine types and locations.</p>
+
+            <div class="flex-row">
+
+              <!-- Machine Types -->
+              <div class="mini-card">
+                <h3>Machine Types</h3>
+                <input id="newMachineType" placeholder="New machine type">
+                <button id="addMachineType" class="primary small">Add</button>
+
+                <ul id="machineTypeList" class="list"></ul>
+              </div>
+
+              <!-- Locations -->
+              <div class="mini-card">
+                <h3>Locations</h3>
+                <input id="newLocation" placeholder="New location">
+                <button id="addLocation" class="primary small">Add</button>
+
+                <ul id="locationList" class="list"></ul>
+              </div>
+
+            </div>
+          </section>
+
+          
 
           <!-- TRIAL EDIT REVIEW -->
           <h3>Trial Edit Review</h3>
@@ -638,7 +654,7 @@
       });
       function formatDate(dateStr) {
         const d = new Date(dateStr);
-        console.log(d.toLocaleDateString("en-US"));
+        //console.log(d.toLocaleDateString("en-US"));
         return d.toLocaleDateString("en-US");
       }
 
@@ -707,6 +723,74 @@
         }
       });
 
+
+
+
+      // =============================
+      // SUPERVISOR UI: MACHINE TYPES
+      // =============================
+      function loadSupervisorMachineTypes() {
+        const list = document.getElementById("machineTypeList");
+
+        onValue(ref(db, "extras/machineTypes"), (snapshot) => {
+          const data = snapshot.val() || {};
+          list.innerHTML = "";
+
+          Object.entries(data).forEach(([id, type]) => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+              ${type}
+              <button data-id="${id}" class="deleteType">✖</button>
+            `;
+            list.appendChild(li);
+          });
+
+          document.querySelectorAll(".deleteType").forEach((btn) => {
+            btn.onclick = () => remove(ref(db, "extras/machineTypes/" + btn.dataset.id));
+          });
+        });
+      }
+
+      document.getElementById("addMachineType").onclick = () => {
+        const val = document.getElementById("newMachineType").value.trim();
+        if (!val) return;
+        push(ref(db, "extras/machineTypes"), val);
+        document.getElementById("newMachineType").value = "";
+      };
+
+      // =============================
+      // SUPERVISOR UI: LOCATIONS
+      // =============================
+      function loadSupervisorLocations() {
+        const list = document.getElementById("locationList");
+
+        onValue(ref(db, "extras/locations"), (snapshot) => {
+          const data = snapshot.val() || {};
+          list.innerHTML = "";
+
+          Object.entries(data).forEach(([id, loc]) => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+              ${loc}
+              <button data-id="${id}" class="deleteLocation">✖</button>
+            `;
+            list.appendChild(li);
+          });
+
+          document.querySelectorAll(".deleteLocation").forEach((btn) => {
+            btn.onclick = () => remove(ref(db, "extras/locations/" + btn.dataset.id));
+          });
+        });
+      }
+
+      document.getElementById("addLocation").onclick = () => {
+        const val = document.getElementById("newLocation").value.trim();
+        if (!val) return;
+        push(ref(db, "extras/locations"), val);
+        document.getElementById("newLocation").value = "";
+      };
+      
+      
       // =====================
       // LOAD ALL USERS FOR SUPERVISOR PANEL
       // =====================
@@ -1071,6 +1155,8 @@
             document.getElementById("supervisor").classList.remove("hidden"); // Load user list + trial edits 
             loadAllUsers(); 
             renderTrialEditsTable();
+            loadSupervisorMachineTypes();
+            loadSupervisorLocations();
           }
 
 
@@ -1743,6 +1829,10 @@
 
             if (action === "edit") {
               stockIdInput.value = id;
+              document.getElementById("stockForm").scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
               document.getElementById("stockPartType").value = row.partType || "";
               document.getElementById("stockMachineType").value = row.machineType || "";
               document.getElementById("stockPartNumber").value = row.partNumber || "";
@@ -1942,6 +2032,26 @@
 
       /// Machine Location Tab
 
+      // =============================
+      // LOAD MACHINE TYPES (from extras)
+      // =============================
+      function loadMachineTypes() {
+        const dropdown = document.getElementById("machineType");
+
+        onValue(ref(db, "extras/machineTypes"), (snapshot) => {
+          const data = snapshot.val() || {};
+
+          dropdown.innerHTML = `<option value="">Select Type</option>`;
+
+          Object.values(data).forEach((type) => {
+            dropdown.innerHTML += `<option value="${type}">${type}</option>`;
+          });
+        });
+      }
+
+      // =============================
+      // LOAD MACHINE NAMES
+      // =============================
       function loadMachineNames() {
         const dropdown = document.getElementById("machineName");
 
@@ -1957,11 +2067,33 @@
           });
         });
       }
+
+      // =============================
+      // LOAD LOCATIONS (from extras)
+      // =============================
+      function loadLocations() {
+        const dropdown = document.getElementById("machineLocation");
+
+        onValue(ref(db, "extras/locations"), (snapshot) => {
+          const data = snapshot.val() || {};
+
+          dropdown.innerHTML = `<option value="">Select Location</option>`;
+
+          Object.values(data).forEach((loc) => {
+            dropdown.innerHTML += `<option value="${loc}">${loc}</option>`;
+          });
+        });
+      }
+
       document.getElementById("machineForm").addEventListener("submit", (e) => {
         e.preventDefault();
 
-        const id = document.getElementById("machineId").value || 
-                   document.getElementById("machineName").value.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+        const id =
+          document.getElementById("machineId").value ||
+          document
+            .getElementById("machineName")
+            .value.toLowerCase()
+            .replace(/[^a-z0-9_-]/g, "_");
 
         const machineData = {
           machineType: document.getElementById("machineType").value,
@@ -1969,7 +2101,7 @@
           serialNumber: document.getElementById("serialNumber").value,
           location: document.getElementById("machineLocation").value,
           tankName: document.getElementById("machineTank").value,
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
         };
 
         set(ref(db, `inventory/machines/${id}`), machineData);
@@ -1978,16 +2110,17 @@
         document.getElementById("machineId").value = "";
       });
 
-      
-
+      // Load dropdowns
+      loadMachineTypes();
       loadMachineNames();
+      loadLocations();
+
       function loadMachineTable() {
         const tbody = document.querySelector("#machineTable tbody");
 
-        // Load both machines and tanks
         Promise.all([
           get(ref(db, "inventory/machines")),
-          get(ref(db, "inventory/tanks"))
+          get(ref(db, "inventory/tanks")),
         ]).then(([machineSnap, tankSnap]) => {
           const machines = machineSnap.val() || {};
           const tanks = tankSnap.val() || {};
@@ -1997,16 +2130,13 @@
           Object.entries(machines).forEach(([id, m]) => {
             const tr = document.createElement("tr");
 
-            // ⭐ PART 1 — Find the tank PSI
             let psi = "-";
             Object.values(tanks).forEach((t) => {
               if (t.tankName === m.tankName) {
                 psi = t.psi ?? "-";
               }
             });
-              
-                
-            // Build the row
+
             tr.innerHTML = `
               <td>${m.machineType}</td>
               <td>${m.machineName}</td>
@@ -2025,10 +2155,9 @@
 
           attachMachineActions();
         });
+
         makeTableSortable("machineTable");
-
       }
-
 
       loadMachineTable();
 
@@ -2044,14 +2173,16 @@
               get(ref(db, `inventory/machines/${id}`)).then((snap) => {
                 const m = snap.val();
                 if (!m) return;
-
+                document.getElementById("machineForm").scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
                 document.getElementById("machineId").value = id;
                 document.getElementById("machineType").value = m.machineType;
                 document.getElementById("machineName").value = m.machineName;
                 document.getElementById("serialNumber").value = m.serialNumber;
                 document.getElementById("machineLocation").value = m.location;
                 document.getElementById("machineTank").value = m.tankName || "";
-                //document.querySelector('.tab-btn[data-tab="machines"]').click();
               });
             }
 
@@ -2063,6 +2194,7 @@
           });
         });
       }
+
       function loadTankNames() {
         const dropdown = document.getElementById("machineTank");
 
@@ -2075,7 +2207,7 @@
           `;
 
           Object.entries(data).forEach(([id, tankData]) => {
-            const tankName = tankData.tankName || id; // fallback if missing
+            const tankName = tankData.tankName || id;
             const psi = tankData.psi ?? "-";
 
             dropdown.innerHTML += `
@@ -2088,6 +2220,8 @@
       }
 
       loadTankNames();
+
+
 
       //machine table sorting
       function makeTableSortable(tableId) {
@@ -2151,8 +2285,7 @@
       }
 
 
-
-      
+     
 
       
     </script>
