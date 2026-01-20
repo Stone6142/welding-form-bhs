@@ -11,19 +11,26 @@ import admin from "firebase-admin";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// ============================
+// FIREBASE ADMIN INITIALIZATION
+// ============================
 admin.initializeApp({
   credential: admin.credential.cert(
     JSON.parse(process.env.FIREBASE_ADMIN_KEY as string)
   ),
+  databaseURL: "https://welding-form-default-rtdb.firebaseio.com"
 });
 
-const SUPER_ADMIN_EMAIL = "sb4549@k12.sd.us";
 
+// ============================
+// EXPRESS SETUP
+// ============================
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -52,16 +59,42 @@ app.use((req, res, next) => {
   next();
 });
 
-function verifySuperAdmin(req: Request, res: Response, next: NextFunction) {
-  const adminEmail = req.headers["x-admin-email"];
-  if (adminEmail !== SUPER_ADMIN_EMAIL) {
-    return res.status(403).json({ error: "Not authorized" });
+// ============================
+// ROLE‑BASED SUPERVISOR CHECK
+// ============================
+async function verifySupervisor(req: Request, res: Response, next: NextFunction) {
+  try {
+    const idToken = req.headers.authorization?.split("Bearer ")[1];
+    if (!idToken) {
+      return res.status(401).json({ error: "Missing auth token" });
+    }
+
+    // Verify Firebase Auth token
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const uid = decoded.uid;
+
+    // Load user role from Realtime Database
+    const snap = await admin.database().ref("users/" + uid).once("value");
+    const userData = snap.val();
+
+    if (!userData || userData.role !== "supervisor") {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    (req as any).supervisorUid = uid;
+    next();
+  } catch (err) {
+    console.error(err);
+    return res.status(403).json({ error: "Invalid or expired token" });
   }
-  next();
 }
 
-// List users (first 1000)
-app.get("/api/users", verifySuperAdmin, async (_req: Request, res: Response) => {
+// ============================
+// ADMIN ROUTES (SUPERVISOR ONLY)
+// ============================
+
+// List users
+app.get("/api/users", verifySupervisor, async (_req: Request, res: Response) => {
   try {
     const list = await admin.auth().listUsers(1000);
     const users = list.users.map((u) => ({
@@ -77,7 +110,7 @@ app.get("/api/users", verifySuperAdmin, async (_req: Request, res: Response) => 
 });
 
 // Create user
-app.post("/api/createUser", verifySuperAdmin, async (req: Request, res: Response) => {
+app.post("/api/createUser", verifySupervisor, async (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: "Email and password required." });
 
@@ -90,7 +123,7 @@ app.post("/api/createUser", verifySuperAdmin, async (req: Request, res: Response
 });
 
 // Update email
-app.post("/api/updateEmail", verifySuperAdmin, async (req: Request, res: Response) => {
+app.post("/api/updateEmail", verifySupervisor, async (req: Request, res: Response) => {
   const { uid, email } = req.body;
   if (!uid || !email) return res.status(400).json({ error: "UID and new email required." });
 
@@ -103,7 +136,7 @@ app.post("/api/updateEmail", verifySuperAdmin, async (req: Request, res: Respons
 });
 
 // Update password
-app.post("/api/updatePassword", verifySuperAdmin, async (req: Request, res: Response) => {
+app.post("/api/updatePassword", verifySupervisor, async (req: Request, res: Response) => {
   const { uid, password } = req.body;
   if (!uid || !password) return res.status(400).json({ error: "UID and new password required." });
 
@@ -115,19 +148,23 @@ app.post("/api/updatePassword", verifySuperAdmin, async (req: Request, res: Resp
   }
 });
 
-// Delete user
-app.post("/api/deleteUser", verifySuperAdmin, async (req: Request, res: Response) => {
+// Delete user (Auth + DB)
+app.post("/api/deleteUser", verifySupervisor, async (req: Request, res: Response) => {
   const { uid } = req.body;
   if (!uid) return res.status(400).json({ error: "UID required." });
 
   try {
     await admin.auth().deleteUser(uid);
+    await admin.database().ref("users/" + uid).remove();
     res.json({ success: true });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
 });
 
+// ============================
+// SERVER + STATIC FILES
+// ============================
 (async () => {
   const server = createServer(app);
 

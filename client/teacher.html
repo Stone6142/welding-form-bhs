@@ -70,6 +70,7 @@
           <button class="tab-btn" data-tab="maintenanceLog">Maintenance Log</button>
           <button class="tab-btn" data-tab="stock">Stock</button>
           <button class="tab-btn" data-tab="booths">Booth Overview</button>
+          <button class="tab-btn" data-tab="supervisor">Admin</button>
           
         </div>
 
@@ -86,6 +87,8 @@
                 <th class="sortable" data-key="processType">Process</th>
                 <th class="sortable" data-key="issueDetails">Issue Details</th>
                 <th class="sortable" data-key="status">Status</th>
+                <th class="sortable" data-key="createdAt">Reported Date</th>
+                <th class="sortable hidden" data-key="updateddate" id="closedDate">Closed Date</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -424,34 +427,71 @@
 
       </div>
 
+        <!-- Supervisor Management + Trial Edit Review -->
+        <section class="tab-content hidden" id="supervisor">
+        <section class="card" id="adminCard">
+          <h2>Supervisor Dashboard</h2>
+          <p class="small-text">
+            Supervisors can manage user accounts and review trial tech edits.
+          </p>
 
-      <!-- Super Admin Card -->
-      <section class="card" id="adminCard" style="display: none">
-        <h2>Super Admin – Create New Admin</h2>
-        <p class="small-text">
-          Only the super admin (<strong>welder.admin@bhs.com</strong>) can
-          create new admin accounts.
-        </p>
+          <!-- CREATE ACCOUNT -->
+          <h3>Create New Account</h3>
 
-        <label>New Admin Email:</label>
-        <input type="email" id="newAdminEmail" />
+          <label>Email:</label>
+          <input type="email" id="newAdminEmail" />
 
-        <label>New Admin Password:</label>
-        <input type="password" id="newAdminPassword" />
+          <label>Name:</label>
+          <input type="text" id="newAdminname" />
 
-        <button id="createAdminBtn" type="button">Create Admin Account</button>
-        <p class="small-text" id="adminMessage"></p>
-      </section>
-      <section class="card" id="adminCard1" style="display: none">
-        <h2>Delete Account</h2>
-        <input
-          type="email"
-          id="deleteEmail"
-          placeholder="Enter email to delete"
-        />
-        <button id="deleteBtn" type="button">Delete Account</button>
-        <p id="deleteMessage" class="small-text"></p>
-      </section>
+          <label>Password:</label>
+          <input type="password" id="newAdminPassword" />
+
+          <label>Role:</label>
+          <select id="newUserRole">
+            <option value="supervisor">Supervisor</option>
+            <option value="full">Full Tech</option>
+            <option value="trial">Trial Tech</option>
+          </select>
+
+          <button id="createAdminBtn" type="button">Create Account</button>
+          <p class="small-text" id="adminMessage"></p>
+
+          <hr />
+
+          <!-- USER LIST -->
+          <h3>Manage Existing Accounts</h3>
+          <table id="userTable" class="styled-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th style="width: 120px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <hr />
+
+          <!-- TRIAL EDIT REVIEW -->
+          <h3>Trial Edit Review</h3>
+          <table id="trialEditsTable" class="styled-table">
+            <thead>
+              <tr>
+                <th>Machine</th>
+                <th>Location</th>
+                <th>Tech Name</th>
+                <th>Submitted</th>
+                <th style="width: 200px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+        </section>
+
       
     </main>
 
@@ -483,7 +523,6 @@
         equalTo
       } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-      const SUPER_ADMIN_EMAIL = "welder.admin@bhs.com";
 
       const firebaseConfig = {
         apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
@@ -505,7 +544,6 @@
       const loginCard = document.getElementById("loginCard");
       const dashboardCard = document.getElementById("dashboardCard");
       const adminCard = document.getElementById("adminCard");
-      const adminCard1 = document.getElementById("adminCard1");
       const authStatus = document.getElementById("authStatus");
       const loginMessage = document.getElementById("loginMessage");
       const adminMessage = document.getElementById("adminMessage");
@@ -520,9 +558,9 @@
       const logoutBtn = document.getElementById("logoutBtn");
       const createAdminBtn = document.getElementById("createAdminBtn");
 
-      let allIssues = {}; // raw data from Firebase
-      let currentTab = "open"; // 'open' or 'solved'
-      let sortState = { key: null, direction: 1 }; // 1 = asc, -1 = desc
+      let allIssues = {};
+      let currentTab = "open";
+      let sortState = { key: null, direction: 1 };
 
       loginBtn.addEventListener("click", async () => {
         loginMessage.textContent = "";
@@ -547,20 +585,47 @@
         await signOut(auth);
       });
 
-      // Auth state listener
-      onAuthStateChanged(auth, (user) => {
+      async function loadUserData(uid) {
+        const snap = await get(ref(db, "users/" + uid));
+        if (snap.exists()) {
+          return snap.val(); // contains {name, email, role}
+        }
+        return { name: "Unknown", role: "full" };
+      }
+
+
+      let userRole = "full";
+
+      // =====================
+      // AUTH STATE LISTENER
+      // =====================
+      onAuthStateChanged(auth, async (user) => {
         if (user) {
-          authStatus.textContent = `Logged in as: ${user.email}`;
+          const userData = await loadUserData(user.uid);
+          userRole = userData.role || "full";
+
+          authStatus.textContent = `Logged in as: ${userData.name}`;
+
           loginCard.style.display = "none";
           dashboardCard.style.display = "block";
+          
 
-          if (user.email === SUPER_ADMIN_EMAIL) {
-            adminCard.style.display = "block";
-            adminCard1.style.display = "block";
+          if (userRole === "supervisor") {
+            document.querySelector('.tab-btn[data-tab="supervisor"]').style.display = "inline-block";
+            loadAllUsers(); // loads user list
+            renderTrialEditsTable(); // loads trial edits
           } else {
-            adminCard.style.display = "none";
-            adminCard1.style.display = "none";
+            document.querySelector('.tab-btn[data-tab="supervisor"]').style.display = "none";
           }
+
+          if (userRole === "trial") {
+            document.querySelector('.tab-btn[data-tab="maintenanceLog"]').style.display = "none";
+            document.querySelector('.tab-btn[data-tab="booths"]').style.display = "none";
+          } else {
+            document.querySelector('.tab-btn[data-tab="maintenanceLog"]').style.display = "inline-block";
+            document.querySelector('.tab-btn[data-tab="booths"]').style.display = "inline-block";
+          }
+          
 
           subscribeToIssues();
         } else {
@@ -568,25 +633,31 @@
           loginCard.style.display = "block";
           dashboardCard.style.display = "none";
           adminCard.style.display = "none";
-          adminCard1.style.display = "none";
           issuesTableBody.innerHTML = "";
         }
       });
+      function formatDate(dateStr) {
+        const d = new Date(dateStr);
+        console.log(d.toLocaleDateString("en-US"));
+        return d.toLocaleDateString("en-US");
+      }
 
-      // Super admin creates new admin accounts
+      // =====================
+      // ACCOUNT CREATION (SUPERVISOR PANEL)
+      // =====================
       createAdminBtn.addEventListener("click", async () => {
         adminMessage.textContent = "";
-        const user = auth.currentUser;
-        if (!user || user.email !== SUPER_ADMIN_EMAIL) {
-          adminMessage.textContent =
-            "You are not authorized to create admin accounts.";
+
+        // Must be logged in AND a supervisor
+        if (!auth.currentUser || userRole !== "supervisor") {
+          adminMessage.textContent = "You are not authorized to create accounts.";
           return;
         }
 
         const email = document.getElementById("newAdminEmail").value.trim();
-        const password = document
-          .getElementById("newAdminPassword")
-          .value.trim();
+        const password = document.getElementById("newAdminPassword").value.trim();
+        const role = document.getElementById("newUserRole").value;
+        const name1 = document.getElementById("newAdminname").value.trim();
 
         if (!email || !password) {
           adminMessage.textContent = "Please enter email and password.";
@@ -594,16 +665,131 @@
         }
 
         try {
-          await createUserWithEmailAndPassword(auth, email, password);
-          adminMessage.textContent = "Admin account created successfully.";
+          // Supervisor's ID token
+          const idToken = await auth.currentUser.getIdToken();
+          console.log(idToken);
+
+          // Create Firebase Auth user via backend
+          const res = await fetch("/api/createUser", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + idToken
+            },
+            body: JSON.stringify({ email, password })
+          });
+
+          const data = await res.json();
+
+          if (!data.success) {
+            adminMessage.textContent = "Error: " + data.error;
+            return;
+          }
+
+          const uid = data.uid;
+
+          // Save user info in Realtime Database
+          await set(ref(db, "users/" + uid), {
+            email,
+            name: name1,
+            role
+          });
+
+          adminMessage.textContent = `Account created with role: ${role}`;
+
+          // Clear fields
           document.getElementById("newAdminEmail").value = "";
           document.getElementById("newAdminPassword").value = "";
+          document.getElementById("newAdminname").value = "";
         } catch (error) {
           console.error(error);
-          adminMessage.textContent =
-            "Error creating admin account: " + error.message;
+          adminMessage.textContent = "Error creating account.";
         }
       });
+
+      // =====================
+      // LOAD ALL USERS FOR SUPERVISOR PANEL
+      // =====================
+      function loadAllUsers() {
+        const userTable = document.querySelector("#userTable tbody");
+        if (!userTable) return;
+
+        onValue(ref(db, "users"), (snapshot) => {
+          const users = snapshot.val() || {};
+          userTable.innerHTML = "";
+
+          Object.entries(users).forEach(([uid, user]) => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+              <td>${user.name || ""}</td>
+              <td>${user.email || ""}</td>
+              <td>
+                <select data-uid="${uid}" class="roleSelect">
+                  <option value="supervisor" ${user.role === "supervisor" ? "selected" : ""}>Supervisor</option>
+                  <option value="full" ${user.role === "full" ? "selected" : ""}>Full Tech</option>
+                  <option value="trial" ${user.role === "trial" ? "selected" : ""}>Trial Tech</option>
+                </select>
+              </td>
+              <td>
+                <button class="danger deleteUserBtn" data-uid="${uid}" data-email="${user.email}">
+                  Delete
+                </button>
+              </td>
+            `;
+
+            userTable.appendChild(tr);
+          });
+
+          // Handle role changes
+          document.querySelectorAll(".roleSelect").forEach((sel) => {
+            sel.addEventListener("change", async () => {
+              const uid = sel.dataset.uid;
+              const newRole = sel.value;
+
+              await update(ref(db, "users/" + uid), { role: newRole });
+              alert("Role updated.");
+            });
+          });
+
+          // Handle delete buttons
+          document.querySelectorAll(".deleteUserBtn").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const uid = btn.dataset.uid;
+              const email = btn.dataset.email;
+
+              if (!confirm(`Delete account for ${email}?`)) return;
+
+              try {
+                const idToken = await auth.currentUser.getIdToken();
+
+                const res = await fetch("/api/deleteUser", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + idToken
+                  },
+                  body: JSON.stringify({ uid })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                  await remove(ref(db, "users/" + uid));
+                  alert("Account deleted successfully.");
+                } else {
+                  alert("Error: " + data.error);
+                }
+              } catch (err) {
+                console.error(err);
+                alert("Server error.");
+              }
+            });
+          });
+        });
+      }
+
+      
 
       // Build dynamic issue description
       function buildIssueDescription(issue) {
@@ -687,15 +873,17 @@
             return 0;
           });
         }
-
+        
         // Render rows
+        if (currentTab === "open"){
+        document.getElementById("closedDate").classList.add("hidden");
         entries.forEach((item) => {
           const tr = document.createElement("tr");
 
           const statusClass =
             item.status === "solved" ? "status-solved" : "status-open";
           const statusLabel = item.status === "solved" ? "Solved" : "Open";
-
+          let issuedate = formatDate(item.createdAt);
           tr.innerHTML = `
         <td>${item.studentName || ""}</td>
         <td>${item.classPeriod || ""}</td>
@@ -703,6 +891,7 @@
         <td>${item.processType || ""}</td>
         <td>${item.issueDetails || ""}</td>
         <td class="${statusClass}">${statusLabel}</td>
+        <td>${issuedate || ""}</td>
         <td>
           <button 
             data-id="${item.id}" 
@@ -716,7 +905,43 @@
 
           issuesTableBody.appendChild(tr);
         });
+        };
 
+        if (currentTab === "solved"){
+          entries.forEach((item) => {
+            const tr = document.createElement("tr");
+
+            const statusClass =
+              item.status === "solved" ? "status-solved" : "status-open";
+            const statusLabel = item.status === "solved" ? "Solved" : "Open";
+            let issuedate = formatDate(item.createdAt);
+            let updateddate = formatDate(item.updateddate);
+            
+            document.getElementById("closedDate").classList.remove("hidden");
+            tr.innerHTML = `
+          <td>${item.studentName || ""}</td>
+          <td>${item.classPeriod || ""}</td>
+          <td>${item.boothNumber || ""}</td>
+          <td>${item.processType || ""}</td>
+          <td>${item.issueDetails || ""}</td>
+          <td class="${statusClass}">${statusLabel}</td>
+          <td>${issuedate || ""}</td>
+          <td>${updateddate || ""}</td>
+          <td>
+            <button 
+              data-id="${item.id}" 
+              class="toggleStatusBtn"
+              style="background:${item.status === "open" ? "#4CAF50" : "#FF9800"}; color:white;"
+            >
+              ${item.status === "open" ? "Mark Solved" : "Mark Open"}
+            </button>
+          </td>
+        `;
+
+            issuesTableBody.appendChild(tr);
+          });
+          };
+        
         // Attach listeners to toggle buttons
         document.querySelectorAll(".toggleStatusBtn").forEach((btn) => {
           btn.addEventListener("click", async () => {
@@ -727,7 +952,11 @@
             const newStatus = current.status === "open" ? "solved" : "open";
 
             try {
-              await update(issueRef, { status: newStatus });
+              await update(issueRef, { 
+                
+                status: newStatus, 
+                updateddate: Date.now()
+                });
             } catch (error) {
               console.error(error);
               alert("Error updating issue status.");
@@ -771,41 +1000,7 @@
           renderTable();
         });
       }
-      const deleteBtn = document.getElementById("deleteBtn");
-      const deleteEmail = document.getElementById("deleteEmail");
-      const deleteMessage = document.getElementById("deleteMessage");
-
-      deleteBtn.addEventListener("click", async () => {
-        const email = deleteEmail.value.trim();
-        deleteMessage.textContent = "";
-
-        if (!email) {
-          deleteMessage.textContent = "Enter an email.";
-          return;
-        }
-
-        try {
-          const res = await fetch("/api/deleteUser", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-email": auth.currentUser.email,
-            },
-            body: JSON.stringify({ email }),
-          });
-
-          const data = await res.json();
-
-          if (data.success) {
-            deleteMessage.textContent = "Account deleted successfully.";
-            deleteEmail.value = "";
-          } else {
-            deleteMessage.textContent = "Error: " + data.error;
-          }
-        } catch (err) {
-          deleteMessage.textContent = "Server error.";
-        }
-      });
+      
       ///////////////////////////////
       ////// MAINTENANCE LOG ////////
       ///////////////////////////////
@@ -849,8 +1044,8 @@
             document.getElementById("stockTab").classList.remove("hidden");
             document.getElementById("tankTab").classList.remove("hidden");
             document.getElementById("tankTab1").classList.remove("hidden");
-            stockSortKey = "amount"
-            stockSortDir = "asc"
+            stockSortKey = "amount";
+            stockSortDir = "asc";
             tankSortKey = "psi";
             tankSortDir = "asc";
             renderTankTable();
@@ -866,30 +1061,34 @@
             logSortDir = "-1";
             renderMaintenanceLogTable();
           }
+          if (tab === "supervisor") { 
+            document.getElementById("supervisor").classList.remove("hidden"); // Load user list + trial edits 
+            loadAllUsers(); 
+            renderTrialEditsTable();
+          }
 
 
         });
       });
+
 
       function getLoggedInTech() {
         const text = authStatus.textContent || "";
         return text.replace("Logged in as:", "").trim();
       }
 
-
-      function formatDate(dateStr) {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString("en-US");
-      }
+      
 
       // =====================
       // REALTIME DATABASE SETUP
       // =====================
       const maintenanceRef = ref(db, "maintenance");
-      const maintenanceHistoryRef = ref(db, "maintenanceHistory"); // ⭐ NEW
+      const trialMaintenanceRef = ref(db, "trialMaintenance");
+      const maintenanceHistoryRef = ref(db, "maintenanceHistory");
 
       let maintenanceData = [];
-      let maintenanceHistoryData = []; // ⭐ NEW
+      let trialMaintenanceData = [];
+      let maintenanceHistoryData = [];
       let maintSortKey = "timestamp";
       let maintSortDir = "desc";
 
@@ -902,29 +1101,53 @@
 
       maintForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        const techEmail = getLoggedInTech(); // Email Logger
+        const techEmail = getLoggedInTech();
+        const id = maintIdInput.value; // original entry ID
 
-        const entry = {
+        const editedEntry = {
           machine: machine.value.trim(),
           location: location.value.trim(),
           date: date.value,
           notes: notes.value.trim(),
           status: status.value,
-          tech: techEmail,      
-          timestamp: Date.now(),
         };
 
-
-        const id = maintIdInput.value;
-
-        if (id) {
-          update(ref(db, `maintenance/${id}`), entry);
-        } else {
-          push(maintenanceRef, entry);
+        //Trial Techs cannot create new entries
+        if (userRole === "trial" && !id) {
+          alert("Trial Techs cannot create new maintenance entries.");
+          return;
         }
 
-        // ⭐ ALWAYS push to history
-        push(maintenanceHistoryRef, entry);
+        // TRIAL TECH EDIT LOGIC
+        if (userRole === "trial") {
+          const trialRecord = {
+            originalId: id,
+            edited: editedEntry,
+            trialTech: techEmail,
+            timestamp: Date.now(),
+            status: "pending",
+          };
+
+          push(trialMaintenanceRef, trialRecord);
+          alert("Your edit has been submitted for supervisor review.");
+        }
+
+        // FULL TECH + SUPERVISOR LOGIC
+        else {
+          const entry = {
+            ...editedEntry,
+            tech: techEmail,
+            timestamp: Date.now(),
+          };
+
+          if (id) {
+            update(ref(db, `maintenance/${id}`), entry);
+          } else {
+            push(maintenanceRef, entry);
+          }
+
+          push(maintenanceHistoryRef, entry);
+        }
 
         maintForm.reset();
         maintIdInput.value = "";
@@ -950,6 +1173,18 @@
       });
 
       // =====================
+      // LIVE LISTENER (TRIAL EDITS)
+      // =====================
+      onValue(trialMaintenanceRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        trialMaintenanceData = Object.entries(data).map(([id, val]) => ({
+          id,
+          ...val,
+        }));
+        renderTrialEditsTable();
+      });
+
+      // =====================
       // LIVE LISTENER (HISTORY TABLE)
       // =====================
       onValue(maintenanceHistoryRef, (snapshot) => {
@@ -968,19 +1203,16 @@
           const key = th.dataset.key;
 
           if (maintSortKey === key) {
-            // User clicked same column → reset to machine sort
             maintSortKey = "machine";
             maintSortDir = "asc";
           } else {
-            // User clicked a new column → sort that column ASC
             maintSortKey = key;
             maintSortDir = "asc";
           }
-          
+
           renderMaintenanceTable();
         });
       });
-
 
       // =====================
       // FILTERING
@@ -995,12 +1227,14 @@
       });
 
       // =====================
-      // RENDER TABLE
+      // RENDER MAIN MAINTENANCE TABLE
       // =====================
       function renderMaintenanceTable() {
         const tbody = document.querySelector("#maintenanceTable tbody");
+        if (!tbody) return;
         tbody.innerHTML = "";
 
+        // ⭐ Everyone sees the real maintenance data
         let rows = [...maintenanceData];
 
         const search = maintSearch.value.toLowerCase();
@@ -1011,9 +1245,9 @@
         rows = rows.filter((r) => {
           const matchesSearch =
             !search ||
-            r.machine.toLowerCase().includes(search) ||
-            r.notes.toLowerCase().includes(search) ||
-            r.location.toLowerCase().includes(search);
+            (r.machine || "").toLowerCase().includes(search) ||
+            (r.notes || "").toLowerCase().includes(search) ||
+            (r.location || "").toLowerCase().includes(search);
 
           const matchesStatus = !statusFilter || r.status === statusFilter;
 
@@ -1024,6 +1258,7 @@
           return matchesSearch && matchesStatus && afterFrom && beforeTo;
         });
 
+        // Sorting
         rows.sort((a, b) => {
           let va = a[maintSortKey];
           let vb = b[maintSortKey];
@@ -1041,9 +1276,11 @@
           return 0;
         });
 
+        // Render rows
         rows.forEach((r) => {
           const tr = document.createElement("tr");
           let formattedDate = formatDate(r.date);
+
           tr.innerHTML = `
             <td>${r.machine || ""}</td>
             <td>${r.location || ""}</td>
@@ -1051,17 +1288,26 @@
             <td>${r.notes || ""}</td>
             <td>${r.status || ""}</td>
             <td>
-              <button type="button" class="secondary" data-id="${r.id}" data-action="edit"><i class="fa-solid fa-pen"></i></button>
-              <button type="button" class="danger" data-id="${r.id}" data-action="delete"><i class="fa-regular fa-trash-can"></i></button>
-              <button type="button" class="secondary" data-machine="${r.machine}" data-action="viewHistory"><i class="fa-solid fa-clock-rotate-left"></i></button>
+              <button type="button" class="secondary" data-id="${r.id}" data-action="edit">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+
+              ${userRole === "trial" ? "" : `
+                <button type="button" class="danger" data-id="${r.id}" data-action="delete">
+                  <i class="fa-regular fa-trash-can"></i>
+                </button>
+              `}
+
+              <button type="button" class="secondary" data-machine="${r.machine}" data-action="viewHistory">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+              </button>
             </td>
           `;
+
           tbody.appendChild(tr);
         });
 
-        // =====================
-        // BUTTON HANDLERS
-        // =====================
+        // Button handlers
         tbody.querySelectorAll("button[data-action]").forEach((btn) => {
           const id = btn.dataset.id;
           const action = btn.dataset.action;
@@ -1069,9 +1315,10 @@
           btn.addEventListener("click", () => {
             if (action === "edit") {
               const row = maintenanceData.find((r) => r.id === id);
+
               document.getElementById("maintenanceForm").scrollIntoView({
                 behavior: "smooth",
-                block: "start"
+                block: "start",
               });
 
               if (!row) return;
@@ -1094,26 +1341,113 @@
               }
             }
 
-            // ⭐ NEW — VIEW HISTORY BUTTON
             if (action === "viewHistory") {
               const machineName = btn.dataset.machine;
 
-              // Switch to Maintenance Log tab
               document.querySelector('.tab-btn[data-tab="maintenanceLog"]').click();
-
-              // Apply filter
               document.getElementById("logSearch").value = machineName;
 
-              // Re-render log table
               renderMaintenanceLogTable();
-
               window.scrollTo({ top: 0, behavior: "smooth" });
             }
           });
         });
       }
-      
 
+      // =====================
+      // SUPERVISOR TRIAL EDIT REVIEW UI
+      // =====================
+      function renderTrialEditsTable() {
+        const table = document.getElementById("trialEditsTable");
+        if (!table) return; // in case UI not present
+        const tbody = table.querySelector("tbody");
+        tbody.innerHTML = "";
+
+        // Only supervisors see this logically (you can also hide tab in HTML)
+        if (userRole !== "supervisor") return;
+
+        trialMaintenanceData.forEach((t) => {
+          const original = maintenanceData.find((r) => r.id === t.originalId) || {};
+          const edited = t.edited || {};
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${edited.machine || original.machine || ""}</td>
+            <td>${edited.location || original.location || ""}</td>
+            <td>${t.trialTech || ""}</td>
+            <td>${formatDate(t.date || new Date(t.timestamp).toISOString())}</td>
+            <td>
+              <button type="button" class="secondary" data-id="${t.id}" data-action="viewOriginal">Original</button>
+              <button type="button" class="secondary" data-id="${t.id}" data-action="viewEdited">Edited</button>
+              <button type="button" class="success" data-id="${t.id}" data-action="approve">Approve</button>
+              <button type="button" class="danger" data-id="${t.id}" data-action="reject">Reject</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Button handlers
+        tbody.querySelectorAll("button[data-action]").forEach((btn) => {
+          const id = btn.dataset.id;
+          const action = btn.dataset.action;
+          const trialRecord = trialMaintenanceData.find((t) => t.id === id);
+          if (!trialRecord) return;
+
+          btn.addEventListener("click", () => {
+            const original = maintenanceData.find((r) => r.id === trialRecord.originalId) || {};
+            const edited = trialRecord.edited || {};
+
+            if (action === "viewOriginal") {
+              alert(
+                `Original:\n\n` +
+                `Machine: ${original.machine || ""}\n` +
+                `Location: ${original.location || ""}\n` +
+                `Date: ${original.date || ""}\n` +
+                `Notes: ${original.notes || ""}\n` +
+                `Status: ${original.status || ""}`
+              );
+            }
+
+            if (action === "viewEdited") {
+              alert(
+                `Edited (by ${trialRecord.trialTech || "unknown"}):\n\n` +
+                `Machine: ${edited.machine || original.machine || ""}\n` +
+                `Location: ${edited.location || original.location || ""}\n` +
+                `Date: ${edited.date || original.date || ""}\n` +
+                `Notes: ${edited.notes || original.notes || ""}\n` +
+                `Status: ${edited.status || original.status || ""}`
+              );
+            }
+
+            if (action === "approve") {
+              const updated = {
+                machine: edited.machine || original.machine || "",
+                location: edited.location || original.location || "",
+                date: edited.date || original.date || "",
+                notes: edited.notes || original.notes || "",
+                status: edited.status || original.status || "",
+                tech: trialRecord.trialTech || original.tech || "",
+                timestamp: Date.now(),
+              };
+
+              update(ref(db, `maintenance/${trialRecord.originalId}`), updated);
+              push(maintenanceHistoryRef, {
+                ...updated,
+                approvedFromTrial: true,
+                trialTech: trialRecord.trialTech || "",
+              });
+              remove(ref(db, `trialMaintenance/${id}`));
+            }
+
+            if (action === "reject") {
+              remove(ref(db, `trialMaintenance/${id}`));
+            }
+          });
+        });
+      }
+
+
+      
       // =====================
       // MAINTENANCE LOG SORT STATE
       // =====================
@@ -1226,11 +1560,6 @@
           tbody.appendChild(tr);
         });
       }
-
-
-      
-      
-
 
       // =====================
       // STOCK TAB SETUP
@@ -1560,7 +1889,7 @@
           let psiColor = "";
           if (r.psi <= 500) psiColor = "color: #ff4d4d; font-weight: bold;";
           else if (r.psi <= 3000) psiColor = "color: #ffd633; font-weight: bold;";
-          else psiColor = "color: #008000; font-weight: bold;"
+          else psiColor = "color: #008000; font-weight: bold;";
           const tr = document.createElement("tr");
 
           tr.innerHTML = `
