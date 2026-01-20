@@ -105,7 +105,7 @@
             <div class="card">
             <h3>Maintenance Form</h3>
             <!-- Form -->
-            <form id="maintenanceForm">
+            <form id="maintenanceForm" class="hidden">
               <input type="hidden" id="maintId" />
 
               <label>Machine Name</label>
@@ -1035,6 +1035,12 @@
 
           if (tab === "maintenance") {
             document.getElementById("maintenanceTab").classList.remove("hidden");
+            
+            if(userRole === "supervisor")
+            {
+              document.getElementById("maintenanceForm").classList.remove("hidden");
+              
+            }
             maintSortKey = "machine";
             maintSortDir = "asc";
             renderMaintenanceTable();
@@ -1103,7 +1109,7 @@
         e.preventDefault();
         const techEmail = getLoggedInTech();
         const id = maintIdInput.value; // original entry ID
-
+        document.getElementById("maintenanceForm").classList.add("hidden");
         const editedEntry = {
           machine: machine.value.trim(),
           location: location.value.trim(),
@@ -1158,6 +1164,7 @@
         maintForm.reset();
         maintIdInput.value = "";
         maintCancelEdit.style.display = "none";
+        document.getElementById("maintenanceForm").classList.add("hidden");
       };
 
       // =====================
@@ -1315,7 +1322,7 @@
           btn.addEventListener("click", () => {
             if (action === "edit") {
               const row = maintenanceData.find((r) => r.id === id);
-
+              document.getElementById("maintenanceForm").classList.remove("hidden");
               document.getElementById("maintenanceForm").scrollIntoView({
                 behavior: "smooth",
                 block: "start",
