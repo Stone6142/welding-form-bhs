@@ -8,6 +8,13 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- Chart.js Zoom Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+    <!-- Luxon Date Adapter -->
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
+
     <!-- Dark Theme Styling -->
     <style>
       body {
@@ -18,12 +25,10 @@
         padding: 20px;
       }
 
-      h1,
-      h2 {
+      h1, h2 {
         color: #ffffff;
       }
 
-      /* GRID LAYOUT */
       #tankChartsContainer {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(850px, 1fr));
@@ -35,7 +40,24 @@
         background-color: #2a2a2a;
         padding: 20px;
         border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 0 10px rgba(0,0,0,0.4);
+        position: relative;
+      }
+
+      .reset-btn {
+        position: absolute;
+        right: 20px;
+        top: 22px;
+        background-color: #444;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .reset-btn:hover {
+        background-color: #666;
       }
 
       canvas {
@@ -50,16 +72,17 @@
     <h1>Tank PSI Charts</h1>
     <p>Each chart shows PSI history over time for every tank.</p>
     <a href="../teacher">Back</a>
+
+    <!-- Combined chart goes here -->
+    <div id="combinedChartContainer"></div>
+
+    <!-- Individual tank charts -->
     <div id="tankChartsContainer"></div>
 
     <!-- Firebase -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-      import {
-        getDatabase,
-        ref,
-        onValue,
-      } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+      import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyBkUu-N7nkDkclV5SkDmozK2SmSur0NWNQ",
@@ -75,95 +98,448 @@
       const app = initializeApp(firebaseConfig);
       const db = getDatabase(app);
 
-      // ============================
-      // LOAD TANK CHARTS
-      // ============================
+      // Straight-line depletion rate between two points
+      function computeDepletionRateBetween(p1, p2) {
+          const deltaPsi = p1.y - p2.y;
+          const deltaDays = (p2.x - p1.x) / (1000 * 60 * 60 * 24);
+          if (deltaDays <= 0) return null;
+          return deltaPsi / deltaDays;
+      }
+
+
+      // Plugin to draw hover line + virtual point on individual charts
+      const hoverLinePlugin = {
+        id: "hoverLinePlugin",
+        afterDatasetsDraw(chart) {
+          const meta = chart.$hoverMeta;
+          if (!meta || !meta.active) return;
+
+          const ctx = chart.ctx;
+          const chartArea = chart.chartArea;
+          const dataset = chart.data.datasets[0];
+          const color = dataset.borderColor || "#4dff4d";
+
+          ctx.save();
+
+          if (!meta.isOnPoint) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+
+            ctx.beginPath();
+            ctx.moveTo(meta.xPixel, chartArea.top);
+            ctx.lineTo(meta.xPixel, chartArea.bottom);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(meta.xPixel, meta.yPixel, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.restore();
+        }
+      };
+
+      // Custom tooltip positioner to anchor at our virtual/real point
+      Chart.Tooltip.positioners.customHover = function(items) {
+        const chart = this.chart;
+        const meta = chart.$hoverMeta;
+        if (meta && meta.active) {
+          return { x: meta.xPixel, y: meta.yPixel };
+        }
+        return Chart.Tooltip.positioners.average(items);
+      };
+
+      Chart.register(hoverLinePlugin);
+
       function loadTankCharts() {
         const container = document.getElementById("tankChartsContainer");
+        const combinedContainer = document.getElementById("combinedChartContainer");
+
         container.innerHTML = "";
+        combinedContainer.innerHTML = "";
 
         onValue(ref(db, "inventory/tanks"), (snapshot) => {
           const tanks = snapshot.val() || {};
+
           container.innerHTML = "";
+          combinedContainer.innerHTML = "";
+
+          // ============================
+          // COMBINED CHART SETUP
+          // ============================
+
+          const combinedCard = document.createElement("div");
+          combinedCard.className = "card";
+
+          combinedCard.innerHTML = `
+            <h2>All Tanks Combined</h2>
+            <button class="reset-btn" id="resetCombined">Reset Zoom</button>
+            <canvas id="combinedChart" height="150"></canvas>
+          `;
+
+          combinedContainer.appendChild(combinedCard);
+
+          const combinedCtx = document.getElementById("combinedChart").getContext("2d");
+
+          const colorPalette = [
+            // REDS
+            "#B71C1C", "#D50000",
+            // PINKS
+            "#880E4F", "#C51162",
+            // PURPLES
+            "#4A148C", "#AA00FF",
+            // DEEP PURPLES
+            "#311B92", "#6200EA",
+            // INDIGOS
+            "#1A237E", "#304FFE",
+            // BLUES
+            "#0D47A1", "#2962FF",
+            // LIGHT BLUES
+            "#01579B", "#0091EA",
+            // CYANS
+            "#006064", "#00B8D4",
+            // TEALS
+            "#004D40", "#00BFA5",
+            // GREENS
+            "#1B5E20", "#00C853",
+            // LIGHT GREENS
+            "#33691E", "#64DD17",
+            // LIMES
+            "#827717", "#AEEA00",
+            // YELLOWS
+            "#F57F17", "#FFD600",
+            // AMBERS
+            "#FF6F00", "#FFAB00",
+            // ORANGES
+            "#E65100", "#FF6D00",
+            // DEEP ORANGES
+            "#BF360C", "#DD2C00",
+            // BROWNS
+            "#3E2723", "#5D4037",
+            // GREYS
+            "#212121", "#616161",
+            // BLUE GREYS
+            "#263238", "#455A64",
+            // EXTRA HIGH‑CONTRAST PICKS
+            "#FF1744", "#F50057", "#651FFF", "#3D5AFE",
+            "#00E5FF", "#1DE9B6", "#00E676", "#76FF03",
+            "#C6FF00", "#FFEA00", "#FFC400", "#FF9100",
+            "#FF3D00"
+          ];
+
+          const combinedDatasets = [];
+          let colorIndex = 0;
+
+          const chartInstances = {};
+
+          // ============================
+          // INDIVIDUAL TANK CHARTS
+          // ============================
+          
 
           Object.entries(tanks).forEach(([tankId, tank]) => {
             const history = tank.psiHistory || {};
 
-            const timestamps = Object.keys(history).sort();
-            const psiValues = timestamps.map((t) => history[t].psi);
+            const entries = Object.entries(history).map(([key, value]) => {
+              
+              let timestamp;
 
-            // Create card
+              if (!isNaN(Number(key))) timestamp = Number(key);
+              else if (value.timestamp) timestamp = value.timestamp;
+              return { x: timestamp, y: value.psi };
+            });
+
+            const validEntries = entries.filter(e => e.x);
+            validEntries.sort((a, b) => a.x - b.x);
+
+            const tankColor = colorPalette[colorIndex % colorPalette.length];
+
+            // Add dataset to combined chart
+            combinedDatasets.push({
+              label: tank.tankName,
+              data: validEntries,
+              borderColor: tankColor,
+              backgroundColor: "transparent",
+              borderWidth: 2,
+              tension: 0.2,
+              pointRadius: 5,
+              pointStyle: "diamond"
+            });
+
+            colorIndex++;
+
+            // Create individual card
             const card = document.createElement("div");
             card.className = "card";
 
             card.innerHTML = `
-          <h2>${tank.tankName} (${tank.airType})</h2>
-          <canvas id="chart_${tankId}" height="120"></canvas>
-        `;
+              <h2>${tank.tankName} (${tank.airType})</h2>
+              <button class="reset-btn" id="reset_${tankId}">Reset Zoom</button>
+              <canvas id="chart_${tankId}" height="120"></canvas>
+            `;
 
             container.appendChild(card);
 
-            // Build chart
-            const ctx = document
-              .getElementById(`chart_${tankId}`)
-              .getContext("2d");
+            const ctx = document.getElementById(`chart_${tankId}`).getContext("2d");
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
               type: "line",
               data: {
-                labels: timestamps.map((t) => {
-                  const d = new Date(Number(t));
-                  return d.toLocaleDateString(); // DATE ONLY
-                }),
-                datasets: [
-                  {
-                    label: "PSI",
-                    data: psiValues,
-                    borderColor: "#4dff4d" /* GREEN */,
-                    backgroundColor: "rgba(77, 255, 77, 0.2)",
-                    borderWidth: 2,
-                    tension: 0.2,
-                    pointRadius: 4,
-                    pointBackgroundColor: psiValues.map((psi) => {
-                      if (psi < 500) return "#ff4d4d"; // red
-                      if (psi < 3000) return "#ffd633"; // yellow
-                      return "#4dff4d"; // green
-                    }),
-                  },
-                ],
+                datasets: [{
+                  label: "PSI",
+                  data: validEntries,
+                  borderColor: tankColor,
+                  backgroundColor: "rgba(77,255,77,0.2)",
+                  borderWidth: 2,
+                  tension: 0.2,
+                  pointRadius: 6,
+                  pointHoverRadius: 10,
+
+                }]
               },
               options: {
                 responsive: true,
+                parsing: false,
                 scales: {
+                  x: {
+                    type: "time",
+                    time: { unit: "day" },
+                    ticks: { color: "#ccc" },
+                    title: { display: true, text: "Date" },
+
+                    // Fix single‑point behavior
+                    min: validEntries.length === 1
+                      ? validEntries[0].x - 6 * 3600_000   // 6 hours padding left
+                      : validEntries[0].x - 3600_000,      // normal padding
+
+                    max: validEntries.length === 1
+                      ? validEntries[0].x + 6 * 3600_000   // 6 hours padding right
+                      : validEntries[validEntries.length - 1].x + 3600_000,
+
+                    offset: validEntries.length === 1 ? false : true,
+                  },
+
                   y: {
-                    min: 0,
-                    max: 25000,
-                    ticks: {
-                      color: "#ccc",
-                      stepSize: 500, // 250 PSI steps
-                      callback: function (value) {
-                        // Only show ticks below 3000 in 250 increments
-                        if (value <= 2500) return value;
-                        // Above 3000, show normal values (every 1000)
-                        if (value % 1000 === 0) return value;
+                    ticks: { color: "#ccc" },
+                    title: { display: true, text: "PSI" }
+                  }
+                },
+
+                plugins: {
+                  tooltip: {
+                    enabled: true,
+                    position: "customHover",
+                    callbacks: {
+                      title: (items) => {
+                        const meta = items[0].chart.$hoverMeta;
+                        if (!meta || !meta.active) return "";
+                        if (meta.isOnPoint) {
+                          const p = validEntries[meta.pointIndex];
+                          return new Date(p.x).toLocaleString();
+                        }
                         return "";
                       },
-                    },
-                    title: { display: true, text: "PSI" },
+                      label: (ctx) => {
+                        const meta = ctx.chart.$hoverMeta;
+                        if (!meta || !meta.active) return "";
+                        if (meta.isOnPoint) {
+                          const p = validEntries[meta.pointIndex];
+                          return `PSI: ${p.y}`;
+                        }
+                        return `PSI: ${meta.interpPsi.toFixed(2)}`;
+                      },
+                      footer: (items) => {
+                        const meta = items[0].chart.$hoverMeta;
+                        if (!meta || !meta.active || meta.isOnPoint) return "";
+                        if (meta.rate == null) return "";
+                        return `Avg Depletion Rate: ${meta.rate.toFixed(1)} PSI/day`;
+                      }
+                    }
                   },
-                  x: {
-                    title: { display: true, text: "Date" },
-                    ticks: { color: "#ccc" },
+                  zoom: {
+                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "xy" },
+                    pan: { enabled: true, mode: "xy" }
                   },
+                  legend: { labels: { color: "#fff" } }
                 },
-                plugins: {
-                  legend: {
-                    labels: { color: "#fff" },
-                  },
-                },
-              },
+                interaction: {
+                  mode: "nearest",
+                  intersect: false
+                }
+              }
             });
+
+            // Attach data for hover logic
+            chart.$dataPoints = validEntries;
+            chart.$hoverMeta = { active: false };
+
+            const canvas = chart.canvas;
+
+            canvas.addEventListener("mousemove", (event) => {
+              const rect = canvas.getBoundingClientRect();
+              const xPixel = event.clientX - rect.left;
+              const yPixel = event.clientY - rect.top;
+
+              const xScale = chart.scales.x;
+              const yScale = chart.scales.y;
+
+              const xValue = xScale.getValueForPixel(xPixel);
+              if (xValue == null) {
+                chart.$hoverMeta.active = false;
+                chart.update("none");
+                return;
+              }
+
+              const points = chart.$dataPoints || [];
+              // If only one real point exists, always treat hover as "on point"
+              if (points.length === 1) {
+                  const p = points[0];
+                  const xPix = xScale.getPixelForValue(p.x);
+                  const yPix = yScale.getPixelForValue(p.y);
+
+                  chart.$hoverMeta = {
+                      active: true,
+                      isOnPoint: true,
+                      pointIndex: 0,
+                      xPixel: xPix,
+                      yPixel: yPix
+                  };
+
+                  chart.update("none");
+                  return;
+              }
+
+              if (points.length < 2) {
+                chart.$hoverMeta.active = false;
+                chart.update("none");
+                return;
+              }
+
+              // Check if we're close to a real point (within 8px)
+              const metaDataset = chart.getDatasetMeta(0);
+              let closestIndex = -1;
+              let closestDist = Infinity;
+
+              metaDataset.data.forEach((elem, idx) => {
+                const dx = elem.x - xPixel;
+                const dy = elem.y - yPixel;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < closestDist) {
+                  closestDist = dist;
+                  closestIndex = idx;
+                }
+              });
+
+              const pointHitRadius = 20;
+              if (closestDist <= pointHitRadius) {
+                const elem = metaDataset.data[closestIndex];
+                chart.$hoverMeta = {
+                  active: true,
+                  isOnPoint: true,
+                  pointIndex: closestIndex,
+                  xPixel: elem.x,
+                  yPixel: elem.y
+                };
+                chart.update("none");
+                return;
+              }
+
+              // Not on a point: find segment between two points
+              let segIndex = -1;
+              for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                if (xValue >= p1.x && xValue <= p2.x) {
+                  segIndex = i;
+                  break;
+                }
+              }
+
+              if (segIndex === -1) {
+                chart.$hoverMeta.active = false;
+                chart.update("none");
+                return;
+              }
+
+              const p1 = points[segIndex];
+              const p2 = points[segIndex + 1];
+
+              const t = (xValue - p1.x) / (p2.x - p1.x);
+              const interpPsi = p1.y + (p2.y - p1.y) * t;
+
+              const rate = computeDepletionRateBetween(p1, p2);
+
+              const xPix = xScale.getPixelForValue(xValue);
+              const yPix = yScale.getPixelForValue(interpPsi);
+
+              chart.$hoverMeta = {
+                active: true,
+                isOnPoint: false,
+                xPixel: xPix,
+                yPixel: yPix,
+                interpPsi,
+                rate
+              };
+
+              chart.update("none");
+            });
+
+            canvas.addEventListener("mouseleave", () => {
+              chart.$hoverMeta.active = false;
+              chart.update("none");
+            });
+
+            chartInstances[tankId] = chart;
+
+            document.getElementById(`reset_${tankId}`).onclick = () => chart.resetZoom();
           });
+
+          // ============================
+          // RENDER COMBINED CHART
+          // ============================
+
+          const combinedChart = new Chart(combinedCtx, {
+            type: "line",
+            data: { datasets: combinedDatasets },
+            options: {
+              responsive: true,
+              parsing: false,
+              scales: {
+                x: {
+                  type: "time",
+                  time: { unit: "day" },
+                  ticks: { color: "#ccc" },
+                  title: { display: true, text: "Date" }
+                },
+                y: {
+                  ticks: { color: "#ccc" },
+                  title: { display: true, text: "PSI" }
+                }
+              },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    title: (items) => {
+                      const ts = items[0].parsed.x;
+                      return new Date(ts).toLocaleString();
+                    },
+                    label: (item) => `PSI: ${item.parsed.y}`
+                  }
+                },
+                zoom: {
+                  zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "xy" },
+                  pan: { enabled: true, mode: "xy" }
+                },
+                legend: { labels: { color: "#fff" } }
+              }
+            }
+          });
+
+          document.getElementById("resetCombined").onclick = () => combinedChart.resetZoom();
         });
       }
 

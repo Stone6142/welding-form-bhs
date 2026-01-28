@@ -1341,7 +1341,7 @@
         if (!tbody) return;
         tbody.innerHTML = "";
 
-        // ⭐ Everyone sees the real maintenance data
+        //  Everyone sees the real maintenance data
         let rows = [...maintenanceData];
 
         const search = maintSearch.value.toLowerCase();
@@ -1885,9 +1885,13 @@
       // LOG PSI HISTORY
       // =====================
       function logPSIChange(tankId, psi) {
-        const logRef = ref(db, `inventory/tanks/${tankId}/psiHistory/${Date.now()}`);
-        set(logRef, { psi });
+        const uniqueKey = push(ref(db, `inventory/tanks/${tankId}/psiHistory`)).key;
+        push(ref(db, `inventory/tanks/${tankId}/psiHistory/`), {
+          psi,
+          timestamp: Date.now()
+        });
       }
+
 
       // =====================
       // FORM SUBMIT (CREATE / UPDATE)
@@ -1901,8 +1905,11 @@
 
         if (!tankName) return;
 
-        const key = tankName.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
-        const oldKey = tankIdInput.value;
+        // Permanent tank ID = timestamp
+        let key = tankIdInput.value;
+        if (!key) {
+          key = Date.now().toString(); // stable ID
+        }
 
         const entry = {
           tankName,
@@ -1911,21 +1918,15 @@
           updatedAt: Date.now()
         };
 
-        if (oldKey && oldKey !== key) {
-          remove(ref(db, `inventory/tanks/${oldKey}`)).then(() => {
-            set(ref(db, `inventory/tanks/${key}`), entry).then(() => {
-              logPSIChange(key, psi);
-            });
-          });
-        } else {
-          set(ref(db, `inventory/tanks/${key}`), entry).then(() => {
-            logPSIChange(key, psi);
-          });
-        }
+        // Save tank
+        update(ref(db, `inventory/tanks/${key}`), entry).then(() => {
+          logPSIChange(key, psi); // always append history
+        });
 
         tankForm.reset();
         tankIdInput.value = "";
       });
+
 
       // =====================
       // LIVE LISTENER
@@ -1949,7 +1950,7 @@
             tankSortKey = key;
             tankSortDir = "asc";
           }
-          
+
           renderTankTable();
         });
       });
@@ -2001,6 +2002,7 @@
           if (r.psi <= 500) psiColor = "color: #ff4d4d; font-weight: bold;";
           else if (r.psi <= 3000) psiColor = "color: #ffd633; font-weight: bold;";
           else psiColor = "color: #008000; font-weight: bold;";
+
           const tr = document.createElement("tr");
 
           tr.innerHTML = `
@@ -2015,7 +2017,7 @@
 
           tbody.appendChild(tr);
         });
-      
+
         tbody.querySelectorAll("button[data-action]").forEach((btn) => {
           const id = btn.dataset.id;
           const action = btn.dataset.action;
@@ -2031,19 +2033,20 @@
               document.getElementById("tankPSI").value = row.psi ?? 0;
 
               document.querySelector('.tab-btn[data-tab="stock"]').click();
-              
             }
+
             if (action === "delete") {
               if (confirm("Are you sure you want to delete this tank?")) {
                 remove(ref(db, `inventory/tanks/${id}`));
               }
             }
-
           });
         });
       }
 
 
+
+      
       /// Machine Location Tab
 
       // =============================
