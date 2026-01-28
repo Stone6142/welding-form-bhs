@@ -18,7 +18,7 @@ admin.initializeApp({
   credential: admin.credential.cert(
     JSON.parse(process.env.FIREBASE_ADMIN_KEY as string)
   ),
-  databaseURL: "https://welding-form-default-rtdb.firebaseio.com"
+  databaseURL: process.env.FIREBASE_DATABASE_URL
 });
 
 
