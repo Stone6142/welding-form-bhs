@@ -271,7 +271,9 @@
             <input type="text" id="stockPartType" required />
 
             <label>Machine Type</label>
-            <input type="text" id="stockMachineType" required />
+            <select id="stockMachineType" required>
+              <option value="">Loading types...</option>
+            </select>
 
             <label>Part Number</label>
             <input type="text" id="stockPartNumber" required />
@@ -283,29 +285,19 @@
           </form>
         
 
-        <div class="card">
-          <h2>Inventory List</h2>
+          <h2 class="hidden">Inventory List</h2>
           <!-- Search -->
           <input
             type="text"
             id="stockSearch"
             placeholder="Search parts..."
-            style="width: 100%; padding: 8px; margin-bottom: 16px;"
+            style="width: 100%; padding: 8px; margin-bottom: 16px;" 
+            class="hidden"
           />
 
-          <table id="stockTable">
-            <thead>
-              <tr>
-                <th class="sortable" data-key="partType">Part Type</th>
-                <th class="sortable" data-key="machineType">Machine Type</th>
-                <th class="sortable" data-key="partNumber">Part Number</th>
-                <th class="sortable" data-key="amount">Amount</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+          <div id="stockCardsContainer"></div>
+
+       
       </div>
       <!-- ========== TANK PSI SECTION ========== -->
       <div id="tankTab1" class="card hidden" style="margin-top: 24px;" >
@@ -357,7 +349,8 @@
 
         <!-- MACHINE TAB -->
         <div id="machinesTab" class="tab-content hidden">
-
+        <div class="card">
+          <h2>Machine Overview</h2>
           <div class="card">
             <h2>Add / Edit Machine</h2>
 
@@ -390,27 +383,15 @@
               <button type="submit" class="primary">Save Machine</button>
             </form>
           </div>
+          
+          <div id="locationCards" class="location-card-container"></div>
 
-          <div class="card">
-            <h2>Machine List</h2>
-
-            <table id="machineTable">
-              <thead>
-                <tr>
-                  <th data-col="machineType" class="sortable">Machine Type</th>
-                  <th data-col="machineName" class="sortable">Name</th>
-                  <th class="sortable">Serial</th>
-                  <th data-col="machineLocation" class="sortable">Location</th>
-                  <th data-col="machineTank" class="sortable">Tank Name</th>
-                  <th data-col="PSI" class="sortable">PSI</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-
+          <h2 style="margin-top: 30px;">Tanks</h2>
+          <div id="unassignedCards" class="location-card-container"></div>
         </div>
+        </div>
+
+        
 
       
 
@@ -1154,10 +1135,11 @@
             tankSortDir = "asc";
             renderTankTable();
             renderStockTable();
+            loadStockMachineTypes();
           }
           if (tab === "booths") {
             document.getElementById("machinesTab").classList.remove("hidden");
-            sortMachineTableByLocation();
+            loadMachineOverview();
           }
           if (tab === "maintenanceLog") {
             document.getElementById("maintenanceLogTab").classList.remove("hidden");
@@ -1341,7 +1323,7 @@
         if (!tbody) return;
         tbody.innerHTML = "";
 
-        // ⭐ Everyone sees the real maintenance data
+        //  Everyone sees the real maintenance data
         let rows = [...maintenanceData];
 
         const search = maintSearch.value.toLowerCase();
@@ -1669,8 +1651,40 @@
       }
 
       // =====================
-      // STOCK TAB SETUP
+      // STOCK TAB
       // =====================
+
+      // LOAD MACHINE TYPES FOR STOCK FORM
+      function loadStockMachineTypes(selected = "") {
+        get(ref(db, "extras/machineTypes")).then((snap) => {
+          const types = snap.val() || {};
+          const select = document.getElementById("stockMachineType");
+
+          select.innerHTML = `<option value="">Select Machine Type</option>`;
+
+          Object.values(types).forEach((t) => {
+            const opt = document.createElement("option");
+            opt.value = t;
+            opt.textContent = t;
+            if (t === selected) opt.selected = true;
+            select.appendChild(opt);
+          });
+        });
+      }
+
+      // =============================
+      // COLOR FOR MACHINE TYPE CARDS
+      // =============================
+      function colorForMachineType(type) {
+        let hash = 0;
+        for (let i = 0; i < type.length; i++) {
+          hash = type.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = Math.abs(hash) % 360;
+        return `hsl(${hue}, 60%, 30%)`; // dark, readable background
+      }
+
+
 
       // Realtime Database reference
       const stockRef = ref(db, "inventory/stock");
@@ -1683,7 +1697,7 @@
       // Elements
       const stockForm = document.getElementById("stockForm");
       const stockIdInput = document.getElementById("stockId");
-      const stockSearch = document.getElementById("stockSearch");
+      //const stockSearch = document.getElementById("stockSearch");
 
       // =====================
       // UTIL: Create ID from machineType + partType
@@ -1717,6 +1731,19 @@
           amount,
           updatedAt: Date.now()
         };
+        // DUPLICATE VALIDATION
+        const duplicate = stockData.find(
+          (p) =>
+            p.machineType.toLowerCase() === machineType.toLowerCase() &&
+            p.partType.toLowerCase() === partType.toLowerCase() &&
+            p.id !== oldKey
+        );
+
+        if (duplicate) {
+          alert("A part with this Part Type already exists for this Machine Type.");
+          return;
+        }
+
 
         if (oldKey && oldKey !== newKey) {
           remove(ref(db, `inventory/stock/${oldKey}`)).then(() => {
@@ -1761,63 +1788,107 @@
       // =====================
       stockSearch.addEventListener("input", renderStockTable);
 
-      // =====================
-      // RENDER TABLE
-      // =====================
+      // =============================
+      // CARD-BASED STOCK RENDERER
+      // =============================
       function renderStockTable() {
-        const tbody = document.querySelector("#stockTable tbody");
-        tbody.innerHTML = "";
-
-        let rows = [...stockData];
+        const container = document.getElementById("stockCardsContainer");
 
         const search = stockSearch.value.toLowerCase();
 
-        rows = rows.filter((r) => {
-          return (
-            !search ||
-            (r.partType || "").toLowerCase().includes(search) ||
-            (r.machineType || "").toLowerCase().includes(search) ||
-            (r.partNumber || "").toLowerCase().includes(search)
-          );
+        // Clear old content
+        container.innerHTML = `
+          <h2>Inventory List</h2>
+          <input type="text" id="stockSearch" placeholder="Search parts..." style="width: 100%; padding: 8px; margin-bottom: 16px;">
+          <div id="stockCards"></div>
+        `;
+
+        // Re-bind search input
+        document.getElementById("stockSearch").addEventListener("input", renderStockTable);
+
+        const cardsContainer = document.getElementById("stockCards");
+
+        
+        // Group parts by machineType
+        const grouped = {};
+        
+
+        stockData.forEach((p) => {
+          const mt = p.machineType || "Uncategorized";
+          if (!grouped[mt]) grouped[mt] = [];
+          grouped[mt].push(p);
         });
 
-        rows.sort((a, b) => {
-          let va = a[stockSortKey];
-          let vb = b[stockSortKey];
-
-          if (stockSortKey === "amount") {
-            va = Number(va) || 0;
-            vb = Number(vb) || 0;
-          } else {
-            va = (va || "").toString().toLowerCase();
-            vb = (vb || "").toString().toLowerCase();
-          }
-
-          if (va < vb) return stockSortDir === "asc" ? -1 : 1;
-          if (va > vb) return stockSortDir === "asc" ? 1 : -1;
-          return 0;
+        const machineTypes = Object.keys(grouped).sort((a, b) => {
+          return grouped[b].length - grouped[a].length; // most parts first
         });
 
-        rows.forEach((r) => {
-          const tr = document.createElement("tr");
+        machineTypes.forEach((mt) => {
+          const machineTypecard = document.createElement("div");
+          machineTypecard.className = "location-card";
+          machineTypecard.style.borderLeft = `6px solid ${colorForMachineType(mt)}`;
+          
+          // Filter by search
+          const parts = grouped[mt].filter((p) => {
+            return (
+              !search ||
+              p.partType.toLowerCase().includes(search) ||
+              p.machineType.toLowerCase().includes(search) ||
+              p.partNumber.toLowerCase().includes(search)
+            );
+          });
 
-          tr.innerHTML = `
-            <td>${r.partType || ""}</td>
-            <td>${r.machineType || ""}</td>
-            <td>${r.partNumber || ""}</td>
-            <td>${r.amount ?? 0}</td>
-            <td>
-              <button class="secondary" data-id="${r.id}" data-action="inc">+</button>
-              <button class="secondary" data-id="${r.id}" data-action="dec">-</button>
-              <button class="secondary" data-id="${r.id}" data-action="edit">Edit</button>
-              <button class="danger" data-id="${r.id}" data-action="delete">Delete</button>
-            </td>
+          if (parts.length === 0) return;
+
+          // Sort parts inside each card
+          parts.sort((a, b) => {
+            let va = a[stockSortKey];
+            let vb = b[stockSortKey];
+
+            if (stockSortKey === "amount") {
+              va = Number(va) || 0;
+              vb = Number(vb) || 0;
+            } else {
+              va = (va || "").toString().toLowerCase();
+              vb = (vb || "").toString().toLowerCase();
+            }
+
+            if (va < vb) return stockSortDir === "asc" ? -1 : 1;
+            if (va > vb) return stockSortDir === "asc" ? 1 : -1;
+            return 0;
+          });
+
+          // Build card
+          const card = document.createElement("div");
+          card.className = "location-card";
+
+          card.innerHTML = `
+            <h3>${mt}</h3>
+            ${parts
+              .map(
+                (p) => `
+              <div class="machine-item" data-id="${p.id}">
+                <div><span class="label">Part:</span> <span class="value">${p.partType}</span></div>
+                <div><span class="label">Number:</span> <span class="value">${p.partNumber}</span></div>
+                <div><span class="label">Amount:</span> <span class="value">${p.amount}</span></div>
+
+                <div class="stock-buttons">
+                  <button class="secondary" data-id="${p.id}" data-action="inc">+</button>
+                  <button class="secondary" data-id="${p.id}" data-action="dec">-</button>
+                  <button class="secondary" data-id="${p.id}" data-action="edit">Edit</button>
+                  <button class="danger" data-id="${p.id}" data-action="delete">Delete</button>
+                </div>
+              </div>
+            `
+              )
+              .join("")}
           `;
 
-          tbody.appendChild(tr);
+          cardsContainer.appendChild(card);
         });
 
-        tbody.querySelectorAll("button[data-action]").forEach((btn) => {
+        // Re-bind button actions
+        cardsContainer.querySelectorAll("button[data-action]").forEach((btn) => {
           const id = btn.dataset.id;
           const action = btn.dataset.action;
           const row = stockData.find((r) => r.id === id);
@@ -1828,7 +1899,7 @@
             if (action === "inc") {
               update(ref(db, `inventory/stock/${id}`), {
                 amount: (row.amount || 0) + 1,
-                updatedAt: Date.now()
+                updatedAt: Date.now(),
               });
             }
 
@@ -1837,22 +1908,19 @@
               if (current <= 0) return;
               update(ref(db, `inventory/stock/${id}`), {
                 amount: current - 1,
-                updatedAt: Date.now()
+                updatedAt: Date.now(),
               });
             }
 
             if (action === "edit") {
               stockIdInput.value = id;
-              document.getElementById("stockForm").scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              });
               document.getElementById("stockPartType").value = row.partType || "";
-              document.getElementById("stockMachineType").value = row.machineType || "";
+              loadStockMachineTypes(row.machineType || "");
               document.getElementById("stockPartNumber").value = row.partNumber || "";
               document.getElementById("stockAmount").value = row.amount ?? 0;
 
               document.querySelector('.tab-btn[data-tab="stock"]').click();
+              document.getElementById("stockForm").scrollIntoView({ behavior: "smooth" });
             }
 
             if (action === "delete") {
@@ -1863,6 +1931,7 @@
           });
         });
       }
+
 
       // =====================
       // TANK PSI TRACKING
@@ -1885,9 +1954,13 @@
       // LOG PSI HISTORY
       // =====================
       function logPSIChange(tankId, psi) {
-        const logRef = ref(db, `inventory/tanks/${tankId}/psiHistory/${Date.now()}`);
-        set(logRef, { psi });
+        const uniqueKey = push(ref(db, `inventory/tanks/${tankId}/psiHistory`)).key;
+        push(ref(db, `inventory/tanks/${tankId}/psiHistory/`), {
+          psi,
+          timestamp: Date.now()
+        });
       }
+
 
       // =====================
       // FORM SUBMIT (CREATE / UPDATE)
@@ -1901,8 +1974,11 @@
 
         if (!tankName) return;
 
-        const key = tankName.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
-        const oldKey = tankIdInput.value;
+        // Permanent tank ID = timestamp
+        let key = tankIdInput.value;
+        if (!key) {
+          key = Date.now().toString(); // stable ID
+        }
 
         const entry = {
           tankName,
@@ -1911,21 +1987,15 @@
           updatedAt: Date.now()
         };
 
-        if (oldKey && oldKey !== key) {
-          remove(ref(db, `inventory/tanks/${oldKey}`)).then(() => {
-            set(ref(db, `inventory/tanks/${key}`), entry).then(() => {
-              logPSIChange(key, psi);
-            });
-          });
-        } else {
-          set(ref(db, `inventory/tanks/${key}`), entry).then(() => {
-            logPSIChange(key, psi);
-          });
-        }
+        // Save tank
+        update(ref(db, `inventory/tanks/${key}`), entry).then(() => {
+          logPSIChange(key, psi); // always append history
+        });
 
         tankForm.reset();
         tankIdInput.value = "";
       });
+
 
       // =====================
       // LIVE LISTENER
@@ -1949,7 +2019,7 @@
             tankSortKey = key;
             tankSortDir = "asc";
           }
-          
+
           renderTankTable();
         });
       });
@@ -2001,6 +2071,7 @@
           if (r.psi <= 500) psiColor = "color: #ff4d4d; font-weight: bold;";
           else if (r.psi <= 3000) psiColor = "color: #ffd633; font-weight: bold;";
           else psiColor = "color: #008000; font-weight: bold;";
+
           const tr = document.createElement("tr");
 
           tr.innerHTML = `
@@ -2015,7 +2086,7 @@
 
           tbody.appendChild(tr);
         });
-      
+
         tbody.querySelectorAll("button[data-action]").forEach((btn) => {
           const id = btn.dataset.id;
           const action = btn.dataset.action;
@@ -2031,18 +2102,16 @@
               document.getElementById("tankPSI").value = row.psi ?? 0;
 
               document.querySelector('.tab-btn[data-tab="stock"]').click();
-              
             }
+
             if (action === "delete") {
               if (confirm("Are you sure you want to delete this tank?")) {
                 remove(ref(db, `inventory/tanks/${id}`));
               }
             }
-
           });
         });
       }
-
 
       /// Machine Location Tab
 
@@ -2064,7 +2133,7 @@
       }
 
       // =============================
-      // LOAD MACHINE NAMES
+      // LOAD MACHINE NAMES (from maintenance)
       // =============================
       function loadMachineNames() {
         const dropdown = document.getElementById("machineName");
@@ -2099,116 +2168,9 @@
         });
       }
 
-      document.getElementById("machineForm").addEventListener("submit", (e) => {
-        e.preventDefault();
-
-        const id =
-          document.getElementById("machineId").value ||
-          document
-            .getElementById("machineName")
-            .value.toLowerCase()
-            .replace(/[^a-z0-9_-]/g, "_");
-
-        const machineData = {
-          machineType: document.getElementById("machineType").value,
-          machineName: document.getElementById("machineName").value,
-          serialNumber: document.getElementById("serialNumber").value,
-          location: document.getElementById("machineLocation").value,
-          tankName: document.getElementById("machineTank").value,
-          updatedAt: Date.now(),
-        };
-
-        set(ref(db, `inventory/machines/${id}`), machineData);
-
-        document.getElementById("machineForm").reset();
-        document.getElementById("machineId").value = "";
-      });
-
-      // Load dropdowns
-      loadMachineTypes();
-      loadMachineNames();
-      loadLocations();
-
-      function loadMachineTable() {
-        const tbody = document.querySelector("#machineTable tbody");
-
-        Promise.all([
-          get(ref(db, "inventory/machines")),
-          get(ref(db, "inventory/tanks")),
-        ]).then(([machineSnap, tankSnap]) => {
-          const machines = machineSnap.val() || {};
-          const tanks = tankSnap.val() || {};
-
-          tbody.innerHTML = "";
-
-          Object.entries(machines).forEach(([id, m]) => {
-            const tr = document.createElement("tr");
-
-            let psi = "-";
-            Object.values(tanks).forEach((t) => {
-              if (t.tankName === m.tankName) {
-                psi = t.psi ?? "-";
-              }
-            });
-
-            tr.innerHTML = `
-              <td>${m.machineType}</td>
-              <td>${m.machineName}</td>
-              <td>${m.serialNumber}</td>
-              <td>${m.location}</td>
-              <td>${m.tankName || "-"}</td>
-              <td>${psi}</td>
-              <td>
-                <button class="secondary" data-id="${id}" data-action="edit"> <i class="fa-solid fa-pen"></i> </button>
-                <button class="danger" data-id="${id}" data-action="delete"> <i class="fa-regular fa-trash-can"></i> </button>
-              </td>
-            `;
-
-            tbody.appendChild(tr);
-          });
-
-          attachMachineActions();
-        });
-
-        makeTableSortable("machineTable");
-      }
-
-      loadMachineTable();
-
-      function attachMachineActions() {
-        const tbody = document.querySelector("#machineTable tbody");
-
-        tbody.querySelectorAll("button[data-action]").forEach((btn) => {
-          const id = btn.dataset.id;
-          const action = btn.dataset.action;
-
-          btn.addEventListener("click", () => {
-            if (action === "edit") {
-              get(ref(db, `inventory/machines/${id}`)).then((snap) => {
-                const m = snap.val();
-                if (!m) return;
-                document.getElementById("machineForm").scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-                document.getElementById("machineId").value = id;
-                document.getElementById("machineType").value = m.machineType;
-                document.getElementById("machineName").value = m.machineName;
-                document.getElementById("serialNumber").value = m.serialNumber;
-                document.getElementById("machineLocation").value = m.location;
-                document.getElementById("machineTank").value = m.tankName || "";
-              });
-            }
-
-            if (action === "delete") {
-              if (confirm("Delete this machine?")) {
-                remove(ref(db, `inventory/machines/${id}`));
-              }
-            }
-          });
-        });
-      }
-
+      // =============================
+      // LOAD TANK NAMES (from inventory/tanks)
+      // =============================
       function loadTankNames() {
         const dropdown = document.getElementById("machineTank");
 
@@ -2233,70 +2195,417 @@
         });
       }
 
+      // =============================
+      // MACHINE FORM SUBMIT
+      // =============================
+      document.getElementById("machineForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const id =
+          document.getElementById("machineId").value ||
+          document
+            .getElementById("machineName")
+            .value.toLowerCase()
+            .replace(/[^a-z0-9_-]/g, "_");
+
+        const machineData = {
+          machineType: document.getElementById("machineType").value,
+          machineName: document.getElementById("machineName").value,
+          serialNumber: document.getElementById("serialNumber").value,
+          location: document.getElementById("machineLocation").value,
+          tankName: document.getElementById("machineTank").value,
+          updatedAt: Date.now(),
+        };
+
+        update(ref(db, `inventory/machines/${id}`), machineData);
+
+        document.getElementById("machineForm").reset();
+        document.getElementById("machineId").value = "";
+
+        // Refresh overview after save
+        loadMachineOverview();
+      });
+
+      // =============================
+      // INITIAL DROPDOWN LOADS
+      // =============================
+      
+      loadMachineTypes();
+      loadMachineNames();
+      loadLocations();
       loadTankNames();
 
+      // =============================
+      // PSI COLOR HELPER
+      // =============================
+      function getPsiColor(psi) {
+        if (psi === "-" || psi === undefined || psi === null) return "gray";
+        if (psi >= 1800) return "limegreen";   // full
+        if (psi >= 800) return "gold";         // medium
+        return "red";                          // low
+      }
 
 
-      //machine table sorting
-      function makeTableSortable(tableId) {
-        const table = document.getElementById(tableId);
-        const headers = table.querySelectorAll("th[data-col]");
-        let sortState = {};
 
-        headers.forEach((header) => {  
-          header.style.cursor = "pointer";
+      // =============================
+      // MACHINE FORM SUBMIT 
+      // =============================
+      document.getElementById("machineForm").addEventListener("submit", (e) => {
+        e.preventDefault();
 
-          header.addEventListener("click", () => {
-            const col = header.dataset.col;
-            const tbody = table.querySelector("tbody");
-            const rows = Array.from(tbody.querySelectorAll("tr"));
+        const id =
+          document.getElementById("machineId").value ||
+          document
+            .getElementById("machineName")
+            .value.toLowerCase()
+            .replace(/[^a-z0-9_-]/g, "_");
 
-            // Toggle sort direction
-            sortState[col] = sortState[col] === "asc" ? "desc" : "asc";
-            const direction = sortState[col];
+        const machineData = {
+          machineType: document.getElementById("machineType").value,
+          machineName: document.getElementById("machineName").value,
+          serialNumber: document.getElementById("serialNumber").value,
+          location: document.getElementById("machineLocation").value,
+          tankName: document.getElementById("machineTank").value,
+          updatedAt: Date.now(),
+        };
 
-            rows.sort((a, b) => {
-              const aText = a.querySelector(`td:nth-child(${header.cellIndex + 1})`).innerText.toLowerCase();
-              const bText = b.querySelector(`td:nth-child(${header.cellIndex + 1})`).innerText.toLowerCase();
 
-              if (aText < bText) return direction === "asc" ? -1 : 1;
-              if (aText > bText) return direction === "asc" ? 1 : -1;
-              return 0;
-            });
+        update(ref(db, `inventory/machines/${id}`), machineData);
 
-            // Re-append sorted rows
-            rows.forEach((row) => tbody.appendChild(row));
+        document.getElementById("machineForm").reset();
+        document.getElementById("machineId").value = "";
+
+        loadMachineOverview();
+      });
+
+
+
+      // =============================
+      // MACHINE OVERVIEW
+      // =============================
+      function loadMachineOverview() {
+        Promise.all([
+          get(ref(db, "inventory/machines")),
+          get(ref(db, "inventory/tanks")),
+          get(ref(db, "extras/locations"))
+        ]).then(([machineSnap, tankSnap, locSnap]) => {
+
+          const machines = machineSnap.val() || {};
+          const tanks = tankSnap.val() || {};
+          const locations = locSnap.val() || {};
+
+          const locationCards = document.getElementById("locationCards");
+          const unassignedCards = document.getElementById("unassignedCards");
+
+          locationCards.innerHTML = "";
+          unassignedCards.innerHTML = "";
+
+
+
+          // =============================
+          // SORT LOCATIONS
+          // =============================
+          const locationList = Object.values(locations);
+
+          locationList.sort((a, b) => {
+            const aNum = parseInt(a, 10);
+            const bNum = parseInt(b, 10);
+            const aIsNum = !isNaN(aNum);
+            const bIsNum = !isNaN(bNum);
+
+            if (aIsNum && bIsNum) return aNum - bNum;
+            if (aIsNum && !bIsNum) return -1;
+            if (!aIsNum && bIsNum) return 1;
+            return a.localeCompare(b);
           });
+
+
+
+          // =============================
+          // GROUP MACHINES BY LOCATION
+          // =============================
+          const grouped = {};
+          locationList.forEach(loc => grouped[loc] = []);
+
+          const unassignedMachines = [];
+
+          Object.entries(machines).forEach(([id, m]) => {
+            const psi = Object.values(tanks).find(t => t.tankName === m.tankName)?.psi ?? "-";
+
+            const machineCard = {
+              id,
+              machineType: m.machineType,
+              machineName: m.machineName,
+              serialNumber: m.serialNumber,
+              tankName: m.tankName || "No Tank",
+              psi,
+              updatedAt: m.updatedAt,
+              location: m.location || ""
+            };
+
+            if (!m.location) {
+              unassignedMachines.push(machineCard);
+            } else {
+              grouped[m.location].push(machineCard);
+            }
+          });
+
+
+
+          // =============================
+          // RENDER LOCATION CARDS
+          // =============================
+          locationList.forEach(loc => {
+            const card = document.createElement("div");
+            card.className = "location-card";
+
+            const machinesHere = grouped[loc];
+
+            card.innerHTML = `
+              <h3>Location: ${loc}</h3>
+              ${
+                machinesHere.length === 0
+                  ? `<p class="label">No machines assigned</p>`
+                  : machinesHere.map(m => `
+                    <div class="machine-item" data-id="${m.id}">
+                      <button class="edit-machine-btn" data-id="${m.id}">✎</button>
+                      <button class="quick-swap-btn" data-id="${m.id}">Swap</button>
+
+                      <div><span class="label">Type:</span> <span class="value">${m.machineType}</span></div>
+                      <div><span class="label">Name:</span> <span class="value">${m.machineName}</span></div>
+                      <div><span class="label">Serial:</span> <span class="value">${m.serialNumber}</span></div>
+                      <div><span class="label">Tank:</span> <span class="value">${m.tankName}</span></div>
+
+                      <div>
+                        <span class="label">PSI:</span>
+                        <span class="value" style="color:${getPsiColor(m.psi)}">${m.psi}</span>
+                      </div>
+
+                      <div><span class="label">Updated:</span> <span class="value">${m.updatedAt ? new Date(m.updatedAt).toLocaleString() : "-"}</span></div>
+                    </div>
+                  `).join("")
+              }
+            `;
+
+            locationCards.appendChild(card);
+          });
+
+
+
+          /* =============================
+          // UNASSIGNED MACHINES CARD
+          // =============================
+          if (unassignedMachines.length > 0) {
+            const card = document.createElement("div");
+            card.className = "location-card";
+
+            card.innerHTML = `
+              <h3>Unassigned Machines</h3>
+              ${
+                unassignedMachines.map(m => `
+                  <div class="machine-item" data-id="${m.id}">
+                    <button class="edit-machine-btn" data-id="${m.id}">✎</button>
+                    <button class="quick-swap-btn" data-id="${m.id}">Swap</button>
+
+                    <div><span class="label">Type:</span> <span class="value">${m.machineType}</span></div>
+                    <div><span class="label">Name:</span> <span class="value">${m.machineName}</span></div>
+                    <div><span class="label">Serial:</span> <span class="value">${m.serialNumber}</span></div>
+                    <div><span class="label">Tank:</span> <span class="value">${m.tankName}</span></div>
+
+                    <div>
+                      <span class="label">PSI:</span>
+                      <span class="value" style="color:${getPsiColor(m.psi)}">${m.psi}</span>
+                    </div>
+
+                    <div><span class="label">Updated:</span> <span class="value">${m.updatedAt ? new Date(m.updatedAt).toLocaleString() : "-"}</span></div>
+                  </div>
+                `).join("")
+              }
+            `;
+
+            locationCards.appendChild(card);
+          }
+                */
+
+
+          // =============================
+          // UNASSIGNED TANKS
+          // =============================
+          const usedTankNames = new Set(
+            Object.values(machines)
+              .map(m => m.tankName)
+              .filter(name => name && name !== "No Tank" && name !== "Shop Air")
+          );
+
+          const unassignedTanks = Object.values(tanks).filter(t => {
+            const name = t.tankName || "";
+            return name && !usedTankNames.has(name);
+          });
+
+          const unassignedTankCard = document.createElement("div");
+          unassignedTankCard.className = "location-card";
+
+          unassignedTankCard.innerHTML = `
+            <h3>Unassigned Tanks</h3>
+            ${
+              unassignedTanks.length === 0
+                ? `<p class="label">All tanks are assigned</p>`
+                : unassignedTanks.sort((a, b) => (b.psi ?? 99999) - (a.psi ?? 99999))
+                    .map(t => `
+                      <div class="machine-item" data-tank="${t.tankName}">
+                        <button class="assign-tank-btn" data-tank="${t.tankName}">Assign</button>
+
+                        <div><span class="label">Tank:</span> <span class="value">${t.tankName}</span></div>
+                        <div><span class="label">Air Type:</span> <span class="value">${t.airType || "-"}</span></div>
+
+                        <div>
+                          <span class="label">PSI:</span>
+                          <span class="value" style="color:${getPsiColor(t.psi)}">${t.psi ?? "-"}</span>
+                        </div>
+
+                        <div><span class="label">Updated:</span> <span class="value">${t.updatedAt ? new Date(t.updatedAt).toLocaleString() : "-"}</span></div>
+                      </div>
+                    `)
+                    .join("")
+            }
+          `;
+
+          unassignedCards.appendChild(unassignedTankCard);
+
+
+
+          // =============================
+          // ALL TANKS (with machine mapping)
+          // =============================
+          const tankToMachine = {};
+          Object.values(machines).forEach(m => {
+            if (m.tankName) tankToMachine[m.tankName] = m.machineName || "Unknown Machine";
+          });
+
+          const allTanksCard = document.createElement("div");
+          allTanksCard.className = "location-card";
+
+          allTanksCard.innerHTML = `
+            <h3>All Tanks</h3>
+            ${
+              Object.values(tanks).length === 0
+                ? `<p class="label">No tanks found</p>`
+                : Object.values(tanks).filter(t => tankToMachine[t.tankName]).sort((a, b) => (a.psi ?? 99999) - (b.psi ?? 99999))  // lowest PSI first
+
+                    .map(t => `
+                      <div class="machine-item" data-tank="${t.tankName}">
+                        <button class="reassign-tank-btn" data-tank="${t.tankName}">Re-Assign</button>
+                        <button class="unassign-tank-btn" data-tank="${t.tankName}">Unassign</button>
+
+
+                        <div><span class="label">Tank:</span> <span class="value">${t.tankName}</span></div>
+                        <div><span class="label">Air Type:</span> <span class="value">${t.airType || "-"}</span></div>
+
+                        <div>
+                          <span class="label">PSI:</span>
+                          <span class="value" style="color:${getPsiColor(t.psi)}">${t.psi ?? "-"}</span>
+                        </div>
+
+                        <div><span class="label">Machine:</span> <span class="value">${tankToMachine[t.tankName] || "Unassigned"}</span></div>
+
+                        <div><span class="label">Updated:</span> <span class="value">${t.updatedAt ? new Date(t.updatedAt).toLocaleString() : "-"}</span></div>
+                      </div>
+                    `)
+                    .join("")
+            }
+          `;
+
+          unassignedCards.appendChild(allTanksCard);
+
         });
       }
-      function sortMachineTableByLocation() {
-        const table = document.getElementById("machineTable");
-        const tbody = table.querySelector("tbody");
-        const rows = Array.from(tbody.querySelectorAll("tr"));
+      // =============================
+      // GLOBAL CLICK HANDLER
+      // =============================
+      document.addEventListener("click", async (e) => {
 
-        rows.sort((a, b) => {
-          const aText = a.children[3].innerText.trim(); // location column
-          const bText = b.children[3].innerText.trim();
+        // EDIT MACHINE
+        if (e.target.classList.contains("edit-machine-btn")) {
+          const id = e.target.dataset.id;
 
-          const aNum = parseInt(aText, 10);
-          const bNum = parseInt(bText, 10);
+          const snap = await get(ref(db, `inventory/machines/${id}`));
+          const machine = snap.val();
+          if (!machine) return;
 
-          const aIsNum = !isNaN(aNum);
-          const bIsNum = !isNaN(bNum);
+          document.getElementById("machineId").value = id;
+          document.getElementById("machineType").value = machine.machineType;
+          document.getElementById("machineName").value = machine.machineName;
+          document.getElementById("serialNumber").value = machine.serialNumber;
+          document.getElementById("machineLocation").value = machine.location || "";
+          document.getElementById("machineTank").value = machine.tankName || "";
 
-          // Numbers always come first
-          if (aIsNum && !bIsNum) return -1;
-          if (!aIsNum && bIsNum) return 1;
+          document.getElementById("machineForm").scrollIntoView({ behavior: "smooth" });
+          return;
+        }
+        
+        // ASSIGN TANK TO FORM
+        if (e.target.classList.contains("assign-tank-btn")) {
+          const tankName = e.target.dataset.tank;
+          document.getElementById("machineTank").value = tankName;
 
-          // Numeric sort
-          if (aIsNum && bIsNum) return aNum - bNum;
+          document.getElementById("machineForm").scrollIntoView({ behavior: "smooth" });
+          return;
+        }
+        
+        // QUICK SWAP TANK
+        if (e.target.classList.contains("quick-swap-btn")) {
+          const machineId = e.target.dataset.id;
 
-          // Alphabetical for non-numbers
-          return aText.localeCompare(bText);
-        });
+          const snap = await get(ref(db, `inventory/machines/${machineId}`));
+          const machine = snap.val();
+          if (!machine) return;
 
-        rows.forEach((row) => tbody.appendChild(row));
-      }
+          document.getElementById("machineId").value = machineId;
+          document.getElementById("machineType").value = machine.machineType;
+          document.getElementById("machineName").value = machine.machineName;
+          document.getElementById("serialNumber").value = machine.serialNumber;
+          document.getElementById("machineLocation").value = machine.location || "";
+
+          document.getElementById("machineForm").scrollIntoView({ behavior: "smooth" });
+          document.getElementById("machineTank").focus();
+
+          return;
+        }
+
+        // QUICK UNASSIGN TANK
+        if (e.target.classList.contains("unassign-tank-btn")) {
+          const tankName = e.target.dataset.tank;
+
+          // Find machine using this tank
+          const machinesSnap = await get(ref(db, "inventory/machines"));
+          const machinesData = machinesSnap.val() || {};
+
+          const machineEntry = Object.entries(machinesData).find(
+            ([id, m]) => m.tankName === tankName
+          );
+
+          if (!machineEntry) return;
+
+          const [machineId] = machineEntry;
+
+          // Remove tank from machine
+          await update(ref(db, `inventory/machines/${machineId}`), {
+            tankName: "",
+            updatedAt: Date.now()
+          });
+
+          loadMachineOverview();
+          return;
+        }
+      });
+      
+      // =============================
+      // INITIAL LOAD
+      // =============================
+      loadMachineOverview();
+
+      
+
 
 
      
