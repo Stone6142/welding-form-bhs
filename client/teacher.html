@@ -159,8 +159,11 @@
               <input type="text" id="machine" required />
 
               <label>Location / Booth</label>
-              <input type="text" id="location" required />
+              <select id="maintenanceLocation" required>
+                <option value="">Loading Locations...</option>
+              </select>
 
+              
               <label>Date Serviced</label>
               <input type="date" id="date" required />
 
@@ -651,6 +654,23 @@
         return new Date(value).toLocaleDateString("en-US");
       }
 
+      // LOAD MACHINE TYPES FOR STOCK FORM
+      function loadStockMachineTypes(selected = "") {
+        get(ref(db, "extras/machineTypes")).then((snap) => {
+          const types = snap.val() || {};
+          const select = document.getElementById("stockMachineType");
+
+          select.innerHTML = `<option value="">Select Machine Type</option>`;
+
+          Object.values(types).forEach((t) => {
+            const opt = document.createElement("option");
+            opt.value = t;
+            opt.textContent = t;
+            if (t === selected) opt.selected = true;
+            select.appendChild(opt);
+          });
+        });
+      }
       
 
       // =====================
@@ -1109,11 +1129,12 @@
           // Show the selected tab
           if (tab === "open" || tab === "solved") {
             document.getElementById("issuesTab").classList.remove("hidden");
-            // Your existing issues filtering logic will handle open/solved
+            
           }
 
           if (tab === "maintenance") {
             document.getElementById("maintenanceTab").classList.remove("hidden");
+            loadMaintenanceLocations();
             
             if(userRole === "supervisor")
             {
@@ -1164,6 +1185,23 @@
         const text = authStatus.textContent || "";
         return text.replace("Logged in as:", "").trim();
       }
+      function loadMaintenanceLocations(selected = "") {
+        get(ref(db, "extras/locations")).then((snap) => {
+          const data = snap.val() || {};
+          const select = document.getElementById("maintenanceLocation");
+
+          select.innerHTML = `<option value="">Select Location</option>`;
+
+          Object.values(data).forEach((loc) => {
+            const opt = document.createElement("option");
+            opt.value = loc;
+            opt.textContent = loc;
+            if (loc === selected) opt.selected = true;
+            select.appendChild(opt);
+          });
+        });
+      }
+
 
       
 
@@ -1414,7 +1452,7 @@
 
               maintIdInput.value = row.id;
               machine.value = row.machine || "";
-              location.value = row.location || "";
+              loadMaintenanceLocations(row.location || "");
               date.value = row.date || "";
               notes.value = row.notes || "";
               status.value = row.status || "Operational";
@@ -1653,24 +1691,6 @@
       // =====================
       // STOCK TAB
       // =====================
-
-      // LOAD MACHINE TYPES FOR STOCK FORM
-      function loadStockMachineTypes(selected = "") {
-        get(ref(db, "extras/machineTypes")).then((snap) => {
-          const types = snap.val() || {};
-          const select = document.getElementById("stockMachineType");
-
-          select.innerHTML = `<option value="">Select Machine Type</option>`;
-
-          Object.values(types).forEach((t) => {
-            const opt = document.createElement("option");
-            opt.value = t;
-            opt.textContent = t;
-            if (t === selected) opt.selected = true;
-            select.appendChild(opt);
-          });
-        });
-      }
 
       // =============================
       // COLOR FOR MACHINE TYPE CARDS
