@@ -285,14 +285,14 @@
           </form>
         
 
-          <h2 class="hidden">Inventory List</h2>
+          <h2>Inventory List</h2>
           <!-- Search -->
           <input
             type="text"
             id="stockSearch"
             placeholder="Search parts..."
             style="width: 100%; padding: 8px; margin-bottom: 16px;" 
-            class="hidden"
+          
           />
 
           <div id="stockCardsContainer"></div>
@@ -1795,11 +1795,8 @@
         const container = document.getElementById("stockCardsContainer");
 
         const search = stockSearch.value.toLowerCase();
-
         // Clear old content
         container.innerHTML = `
-          <h2>Inventory List</h2>
-          <input type="text" id="stockSearch" placeholder="Search parts..." style="width: 100%; padding: 8px; margin-bottom: 16px;">
           <div id="stockCards"></div>
         `;
 
@@ -1807,6 +1804,8 @@
         document.getElementById("stockSearch").addEventListener("input", renderStockTable);
 
         const cardsContainer = document.getElementById("stockCards");
+        
+        
 
         
         // Group parts by machineType
