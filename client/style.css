@@ -74,15 +74,56 @@ main {
 .location-card-container,
 #stockCards {
   display: grid;
-  gap: 20px;
+  row-gap: 10px; 
+  column-gap: 20px;
 }
 
 .location-card-container {
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
 }
 
-#stockCards {
+#requestList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  row-gap: 10px; 
+  column-gap: 20px;
+  margin-top: 20px;
+}
+#requestList {
   grid-template-columns: repeat(3, 1fr);
+}
+#requestList .mini-card {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: start;
+}
+
+#supspot {
+  display: grid;
+  row-gap: 10px; 
+  column-gap: 20px;
+  margin-top: 20px;
+  align-items: start;
+}
+#supspot {
+  grid-template-columns: repeat(2, 1fr);
+}
+#supspot .mini-card {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+
+#stockCards {
+  grid-template-columns: repeat(2, 1fr);
+  align-items: start;
 }
 
 /* LISTS */
@@ -219,7 +260,7 @@ button.danger:hover {
 .edit-machine-btn,
 .quick-swap-btn { background: #444; }
 
-.quick-swap-btn { right: 60px; }
+.quick-swap-btn { right: 35px; }
 .edit-machine-btn { right: 6px; }
 
 .assign-tank-btn {
@@ -269,3 +310,23 @@ th { background: #2a2a2a; }
 
 .status-open { color: #ffb74d; font-weight: bold; }
 .status-solved { color: #66bb6a; font-weight: bold; }
+.status-approved { color: #66bb6a; font-weight: bold; }
+.status-denied { color: #e57373; font-weight: bold; }
+.status-pending { color: #ffb74d; font-weight: bold; }
+.delete-request-btn {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  background: #b30000;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s ease;
+}
+
+.delete-request-btn:hover {
+  background: #e60000;
+}

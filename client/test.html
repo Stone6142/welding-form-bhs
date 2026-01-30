@@ -394,6 +394,29 @@
         </div>
         </div>
 
+        <!---Stock Reques-->
+
+        <div id="requestModal" class="card hidden">
+          <h3>Request Parts</h3>
+
+          <input type="hidden" id="requestPartId">
+
+          <label>Part</label>
+          <input type="text" id="requestPartName" disabled>
+
+          <label>Current Amount</label>
+          <input type="number" id="requestCurrentAmount" disabled>
+
+          <label>Amount Needed</label>
+          <input type="number" id="requestAmountNeeded" required>
+
+          <label>Notes</label>
+          <textarea id="requestNotes"></textarea>
+
+          <button class="primary" id="submitRequest">Submit Request</button>
+          <button class="secondary" id="cancelRequest">Cancel</button>
+        </div>
+
         
 
       
@@ -451,7 +474,7 @@
             <p class="small-text">Supervisors can add or remove machine types and locations.</p>
 
             <div class="flex-row">
-
+            <div id="supspot">
               <!-- Machine Types -->
               <div class="mini-card">
                 <h3>Machine Types</h3>
@@ -468,6 +491,7 @@
                 <button id="addLocation" class="primary small">Add</button>
 
                 <ul id="locationList" class="list"></ul>
+                </div>
               </div>
 
             </div>
@@ -489,7 +513,13 @@
             </thead>
             <tbody></tbody>
           </table>
+          
+
         </section>
+          <div class="card">
+            <h2>Part Requests</h2>
+            <div id="requestList" class="location-card-container"></div>
+          </div>
         </section>
 
       
@@ -657,20 +687,21 @@
       // LOAD MACHINE TYPES FOR STOCK FORM
       function loadStockMachineTypes(selected = "") {
         get(ref(db, "extras/machineTypes")).then((snap) => {
-          const types = snap.val() || {};
+          const data = snap.val() || {};
           const select = document.getElementById("stockMachineType");
 
           select.innerHTML = `<option value="">Select Machine Type</option>`;
 
-          Object.values(types).forEach((t) => {
+          Object.values(data).forEach((type) => {
             const opt = document.createElement("option");
-            opt.value = t;
-            opt.textContent = t;
-            if (t === selected) opt.selected = true;
+            opt.value = type;
+            opt.textContent = type;
+            if (type === selected) opt.selected = true;
             select.appendChild(opt);
           });
         });
       }
+
       
 
       // =====================
@@ -755,7 +786,7 @@
             const li = document.createElement("li");
             li.innerHTML = `
               ${type}
-              <button data-id="${id}" class="deleteType">✖</button>
+              <button data-id="${id}" class="deleteType"><i class="fa-regular fa-trash-can"></i></button>
             `;
             list.appendChild(li);
           });
@@ -787,7 +818,7 @@
             const li = document.createElement("li");
             li.innerHTML = `
               ${loc}
-              <button data-id="${id}" class="deleteLocation">✖</button>
+              <button data-id="${id}" class="deleteLocation"><i class="fa-regular fa-trash-can"></i></button>
             `;
             list.appendChild(li);
           });
@@ -832,7 +863,7 @@
               </td>
               <td>
                 <button class="danger deleteUserBtn" data-uid="${uid}" data-email="${user.email}">
-                  Delete
+                  <i class="fa-regular fa-trash-can"></i>
                 </button>
               </td>
             `;
@@ -1105,6 +1136,26 @@
       ///////////////////////////////
 
       
+      //Auto Delete request after stock met
+      function autoDeleteMetRequests() {
+        get(ref(db, "inventory/partRequests")).then((snap) => {
+          const data = snap.val() || {};
+
+          Object.entries(data).forEach(([id, r]) => {
+            const partId = r.partId;
+            const stockRow = stockData.find((s) => s.id === partId);
+            const liveCurrent = stockRow ? Number(stockRow.amount) || 0 : 0;
+            const needed = Number(r.requestedAmount) || 0;
+
+            if (liveCurrent >= needed) {
+              remove(ref(db, `inventory/partRequests/${id}`));
+            }
+          });
+        });
+      }
+
+
+      
       // =====================
       // TAB SWITCHER
       // Supports: open, solved, maintenance, stock
@@ -1237,7 +1288,6 @@
           notes: notes.value.trim(),
           status: status.value,
         };
-
         //Trial Techs cannot create new entries
         if (userRole === "trial" && !id) {
           alert("Trial Techs cannot create new maintenance entries.");
@@ -1506,8 +1556,8 @@
             <td>
               <button type="button" class="secondary" data-id="${t.id}" data-action="viewOriginal">Original</button>
               <button type="button" class="secondary" data-id="${t.id}" data-action="viewEdited">Edited</button>
-              <button type="button" class="success" data-id="${t.id}" data-action="approve">Approve</button>
-              <button type="button" class="danger" data-id="${t.id}" data-action="reject">Reject</button>
+              <button type="button" class="success" data-id="${t.id}" data-action="approve"><i class="fa-solid fa-check"></i></button>
+              <button type="button" class="danger" data-id="${t.id}" data-action="reject"><i class="fa-solid fa-xmark"></i></button>
             </td>
           `;
           tbody.appendChild(tr);
@@ -1767,10 +1817,10 @@
 
         if (oldKey && oldKey !== newKey) {
           remove(ref(db, `inventory/stock/${oldKey}`)).then(() => {
-            set(ref(db, `inventory/stock/${newKey}`), entry);
+            set(ref(db, `inventory/stock/${newKey}`), entry).then(() => { autoDeleteMetRequests(); });
           });
         } else {
-          set(ref(db, `inventory/stock/${newKey}`), entry);
+          set(ref(db, `inventory/stock/${newKey}`), entry).then(() => { autoDeleteMetRequests(); });
         }
 
         stockForm.reset();
@@ -1888,14 +1938,15 @@
                 (p) => `
               <div class="machine-item" data-id="${p.id}">
                 <div><span class="label">Part:</span> <span class="value">${p.partType}</span></div>
-                <div><span class="label">Number:</span> <span class="value">${p.partNumber}</span></div>
+                <div><span class="label">Part #:</span> <span class="value">${p.partNumber}</span></div>
                 <div><span class="label">Amount:</span> <span class="value">${p.amount}</span></div>
 
                 <div class="stock-buttons">
                   <button class="secondary" data-id="${p.id}" data-action="inc">+</button>
                   <button class="secondary" data-id="${p.id}" data-action="dec">-</button>
-                  <button class="secondary" data-id="${p.id}" data-action="edit">Edit</button>
-                  <button class="danger" data-id="${p.id}" data-action="delete">Delete</button>
+                  <button class="secondary" data-id="${p.id}" data-action="edit"><i class="fa-solid fa-pen"></i></button>
+                  <button class="danger" data-id="${p.id}" data-action="delete"><i class="fa-regular fa-trash-can"></i></button>
+                  <button class="primary" data-id="${p.id}" data-action="request">Request</button>
                 </div>
               </div>
             `
@@ -1916,10 +1967,10 @@
             if (!row) return;
 
             if (action === "inc") {
-              update(ref(db, `inventory/stock/${id}`), {
-                amount: (row.amount || 0) + 1,
-                updatedAt: Date.now(),
-              });
+                update(ref(db, `inventory/stock/${id}`), {
+                  amount: (row.amount || 0) + 1,
+                  updatedAt: Date.now(),
+                }).then(() => { autoDeleteMetRequests(); });
             }
 
             if (action === "dec") {
@@ -1928,28 +1979,174 @@
               update(ref(db, `inventory/stock/${id}`), {
                 amount: current - 1,
                 updatedAt: Date.now(),
-              });
+              }).then(() => { autoDeleteMetRequests(); });
             }
 
             if (action === "edit") {
-              stockIdInput.value = id;
-              document.getElementById("stockPartType").value = row.partType || "";
-              loadStockMachineTypes(row.machineType || "");
-              document.getElementById("stockPartNumber").value = row.partNumber || "";
-              document.getElementById("stockAmount").value = row.amount ?? 0;
+              const row = stockData.find((r) => r.id === id);
+              if (!row) return;
 
-              document.querySelector('.tab-btn[data-tab="stock"]').click();
+              stockIdInput.value = row.id;
+              document.getElementById("stockPartType").value = row.partType || "";
+              document.getElementById("stockPartNumber").value = row.partNumber || "";
+              document.getElementById("stockAmount").value = row.amount || 0;
+
+              loadStockMachineTypes().then(() => {
+                document.getElementById("stockMachineType").value = row.machineType || "";
+              });
+
+              document.getElementById("stockForm").classList.remove("hidden");
               document.getElementById("stockForm").scrollIntoView({ behavior: "smooth" });
             }
+
 
             if (action === "delete") {
               if (confirm("Delete this part from stock?")) {
                 remove(ref(db, `inventory/stock/${id}`));
               }
             }
+            if (action === "request") {
+              const row = stockData.find((r) => r.id === id);
+              if (!row) return;
+
+              document.getElementById("requestPartId").value = row.id;
+              document.getElementById("requestPartName").value = `${row.partType} (${row.partNumber})`;
+              document.getElementById("requestCurrentAmount").value = row.amount;
+
+              document.getElementById("requestModal").classList.remove("hidden");
+              document.getElementById("requestModal").scrollIntoView({ behavior: "smooth" });
+            }
           });
         });
       }
+      // Part Request
+      document.getElementById("submitRequest").addEventListener("click", () => {
+        const id = document.getElementById("requestPartId").value;
+        const row = stockData.find((r) => r.id === id);
+        const TechName = getLoggedInTech();
+
+        const request = {
+          partId: id,
+          partType: row.partType,
+          partNumber: row.partNumber,
+          machineType: row.machineType,
+          currentAmount: row.amount,
+          requestedAmount: Number(document.getElementById("requestAmountNeeded").value),
+          requestedBy: TechName,
+          notes: document.getElementById("requestNotes").value.trim(),
+          timestamp: Date.now(),
+          status: "pending"
+        };
+
+        push(ref(db, "inventory/partRequests"), request);
+
+        document.getElementById("requestModal").classList.add("hidden");
+      });
+
+      document.getElementById("cancelRequest").addEventListener("click", () => {
+        document.getElementById("requestModal").classList.add("hidden");
+      });
+
+      // ADMIN REQUEST LIST
+      const requestRef = ref(db, "inventory/partRequests");
+
+      onValue(requestRef, (snap) => {
+        const data = snap.val() || {};
+        const list = document.getElementById("requestList");
+
+        list.innerHTML = Object.entries(data)
+          .map(([id, r]) => `
+            <div class="mini-card" style="position: relative;">
+              <button class="delete-request-btn" data-id="${id}" data-action="deleteRequest"><i class="fa-regular fa-trash-can"></i></button>
+              
+              <h3>${r.partType}</h3>
+              <p><strong>Part Number:</strong> ${r.partNumber}</p>
+              <p><strong>Machine Type:</strong> ${r.machineType}</p>
+              <p><strong>Current:</strong> ${r.currentAmount}</p>
+              <p><strong>Requested:</strong> ${r.requestedAmount}</p>
+              <p><strong>Requested By:</strong> ${r.requestedBy}</p>
+              <p><strong>Notes:</strong> ${r.notes || "None"}</p>
+              <p class="small-text">${new Date(r.timestamp).toLocaleString()}</p>
+
+              <div class="request-actions">
+                ${r.status === "pending" ? `
+                  <button class="primary" data-id="${id}" data-action="approve"><i class="fa-solid fa-check"></i></button>
+                  <button class="danger" data-id="${id}" data-action="deny"><i class="fa-solid fa-xmark"></i></button>
+                ` : `
+                  <p><strong>Status:</strong> ${r.status}</p>
+                `}
+              </div>
+            </div>
+          `)
+          .join("");
+
+        // APPROVE / DENY BUTTON HANDLERS
+        document.querySelectorAll(".request-actions button").forEach((btn) => {
+          const id = btn.dataset.id;
+          const action = btn.dataset.action;
+          const currentUserName = getLoggedInTech();
+
+          btn.addEventListener("click", () => {
+            if (action === "approve") {
+              update(ref(db, `inventory/partRequests/${id}`), {
+                status: "approved",
+                resolvedAt: Date.now(),
+                approvedBy: currentUserName
+              });
+            }
+
+            if (action === "deny") {
+              update(ref(db, `inventory/partRequests/${id}`), {
+                status: "denied",
+                resolvedAt: Date.now(),
+                approvedBy: currentUserName
+              });
+            }
+          });
+        });
+      });
+      document.querySelectorAll(".delete-request-btn").forEach((btn) => {
+        const id = btn.dataset.id;
+        btn.addEventListener("click", () => {
+            remove(ref(db, `inventory/partRequests/${id}`));
+        });
+      });
+
+      // Single delegated handler for approve / deny / delete
+      document.getElementById("requestList").addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        if (!id || !action) return;
+
+        const currentUserName = getLoggedInTech();
+
+        if (action === "approve") {
+          update(ref(db, `inventory/partRequests/${id}`), {
+            status: "approved",
+            resolvedAt: Date.now(),
+            approvedBy: currentUserName
+          });
+        }
+
+        if (action === "deny") {
+          update(ref(db, `inventory/partRequests/${id}`), {
+            status: "denied",
+            resolvedAt: Date.now(),
+            approvedBy: currentUserName
+          });
+        }
+
+        if (action === "deleteRequest") {
+          if (confirm("Delete this request?")) {
+            remove(ref(db, `inventory/partRequests/${id}`));
+          }
+        }
+      });
+
+      
 
 
       // =====================
@@ -2098,8 +2295,8 @@
             <td>${r.airType || ""}</td>
             <td style="${psiColor}">${r.psi ?? 0}</td>
             <td>
-              <button class="secondary" data-id="${r.id}" data-action="edit">Edit</button>
-              <button class="danger" data-id="${r.id}" data-action="delete">Delete</button>
+              <button class="secondary" data-id="${r.id}" data-action="edit"><i class="fa-solid fa-pen"></i></button>
+              <button class="danger" data-id="${r.id}" data-action="delete"><i class="fa-regular fa-trash-can"></i></button>
             </td>
           `;
 
@@ -2387,12 +2584,12 @@
                   ? `<p class="label">No machines assigned</p>`
                   : machinesHere.map(m => `
                     <div class="machine-item" data-id="${m.id}">
-                      <button class="edit-machine-btn" data-id="${m.id}">✎</button>
+                      <button class="edit-machine-btn" data-id="${m.id}"><i class="fa-solid fa-pen"></i></button>
                       <button class="quick-swap-btn" data-id="${m.id}">Swap</button>
 
                       <div><span class="label">Type:</span> <span class="value">${m.machineType}</span></div>
                       <div><span class="label">Name:</span> <span class="value">${m.machineName}</span></div>
-                      <div><span class="label">Serial:</span> <span class="value">${m.serialNumber}</span></div>
+                      <div><span class="label">Serial #:</span> <span class="value">${m.serialNumber}</span></div>
                       <div><span class="label">Tank:</span> <span class="value">${m.tankName}</span></div>
 
                       <div>
