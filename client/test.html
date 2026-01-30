@@ -22,6 +22,7 @@
   <body>
     <header>
       <h1>Welding Shop – Teacher Dashboard</h1>
+      <button class="secondary hidden" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
       <div class="right" id="authStatus">Not logged in</div>
     </header>
 
@@ -51,8 +52,6 @@
           View and update issues and machine maintenance logs submitted in the
           shop.
         </p>
-
-        <button class="secondary" id="logoutBtn">Log Out</button>
 
         <!-- Search Bar (Issues only) -->
         <input
@@ -638,6 +637,7 @@
 
           loginCard.style.display = "none";
           dashboardCard.style.display = "block";
+          document.getElementById("logoutBtn").classList.remove("hidden");
           
 
           if (userRole === "supervisor") {
@@ -1197,6 +1197,7 @@
             renderMaintenanceTable();
           }
 
+          
           if (tab === "stock") {
             document.getElementById("stockTab").classList.remove("hidden");
             document.getElementById("tankTab").classList.remove("hidden");
