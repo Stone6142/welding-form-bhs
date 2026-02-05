@@ -48,8 +48,8 @@ header .secondary {
   align-items: center;
   position: relative;
   left: 465px;
-  
-  
+
+
 }
 
 /* LAYOUT */
@@ -75,7 +75,7 @@ main {
   background: #2a2a2a;
   padding: 16px;
 }
-
+.location-card, .location-card-container, .machine-item { overflow: visible; }
 .location-card h3 { margin-top: 0; color: #fff; }
 
 .location-card-container,
@@ -174,6 +174,32 @@ main {
 .machine-item .label { opacity: 0.7; font-size: 0.85em; }
 .machine-item .value { font-weight: bold; }
 
+.machine-item.highlight {
+  animation: pulseHighlight 1s ease-out;
+  z-index: 9999 !important;
+  position: relative;
+}
+
+@keyframes pulseHighlight {
+  0% {
+    box-shadow: 0 0 0px 0px #2979ff;
+  }
+  25% {
+    box-shadow: 0 0 15px 6px #2979ff;
+  }
+  50% {
+    box-shadow: 0 0 25px 10px #2979ff;
+  }
+  75% {
+    box-shadow: 0 0 15px 6px #2979ff;
+  }
+  100% {
+    box-shadow: 0 0 0px 0px #2979ff;
+  }
+}
+
+
+
 /* BUTTONS */
 button {
   margin-top: 12px;
@@ -254,21 +280,17 @@ button.danger:hover {
 .assign-tank-btn,
 .unassign-tank-btn,
 .reassign-tank-btn {
-  position: absolute;
-  top: 6px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 4px 6px;
-  font-size: 12px;
-  color: white;
+  position: relative; 
+  margin: 0;       
 }
+
+
 
 .edit-machine-btn,
 .quick-swap-btn { background: #444; }
 
-.quick-swap-btn { right: 35px; }
-.edit-machine-btn { right: 6px; }
+.quick-swap-btn { right: 45px; }
+.edit-machine-btn { left: 80px; }
 
 .assign-tank-btn {
   right: 6px;
@@ -287,7 +309,7 @@ button.danger:hover {
 .unassign-tank-btn:active { background: #800000; }
 
 .reassign-tank-btn {
-  right: 80px;
+  right: 6px;
   background: #0077ff;
   padding: 4px 8px;
 }
@@ -322,8 +344,8 @@ th { background: #2a2a2a; }
 .status-pending { color: #ffb74d; font-weight: bold; }
 .delete-request-btn {
   position: absolute;
-  top: 3px;
-  right: 6px;
+  top: -10px;
+  left: 225px;
   background: #b30000;
   color: white;
   border: none;
@@ -336,4 +358,116 @@ th { background: #2a2a2a; }
 
 .delete-request-btn:hover {
   background: #e60000;
+}
+
+.maint-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%; /* allows full expansion */
+}
+
+.maint-btn-grid button {
+  width: 100%;
+  height: 38px; /* increased from 32px */
+  aspect-ratio: 1 / 1; /* makes them perfect squares */
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 1rem;
+  color: white;
+  border: none;
+  cursor: pointer;
+  line-height: 1; /* prevents icon vertical drift */
+  position: relative;
+}
+.maint-btn-grid button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.maint-btn-grid button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+
+
+.maint-btn-grid button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #222;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 9999;
+}
+
+.maint-btn-grid button:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+
+
+/* Edit = Blue */
+.btn-edit {background: #2979ff;}
+.btn-edit:hover {background: #1c5fcc;}
+/* Delete = Red */
+.btn-delete {background: #d32f2f;}
+.btn-delete:hover {background: #b71c1c;}
+/* History = Purple */
+.btn-history {background: #8e24aa;}
+.btn-history:hover{background: #6a1b9a;}
+/* View Machine = Green */
+.btn-view {background: #43a047;}
+.btn-view:hover {background: #2e7d32;}
+
+/* GLOBAL TOOLTIP */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #222;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 9999;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.machine-item {
+  position: relative;
+}
+
+.machine-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 6px;
+  z-index: 20;
 }

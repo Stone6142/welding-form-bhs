@@ -22,7 +22,7 @@
   <body>
     <header>
       <h1>Welding Shop – Teacher Dashboard</h1>
-      <button class="secondary hidden" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      <button class="secondary hidden" id="logoutBtn" data-tooltip="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
       <div class="right" id="authStatus">Not logged in</div>
     </header>
 
@@ -137,7 +137,6 @@
               <thead>
                 <tr>
                   <th class="sortable" data-key="machine">Machine</th>
-                  <th class="sortable" data-key="location">Location</th>
                   <th class="sortable" data-key="date">Date</th>
                   <th class="sortable" data-key="notes">Notes</th>
                   <th class="sortable" data-key="status">Status</th>
@@ -156,12 +155,6 @@
 
               <label>Machine Name</label>
               <input type="text" id="machine" required />
-
-              <label>Location / Booth</label>
-              <select id="maintenanceLocation" required>
-                <option value="">Loading Locations...</option>
-              </select>
-
               
               <label>Date Serviced</label>
               <input type="date" id="date" required />
@@ -245,7 +238,6 @@
             <thead>
               <tr>
                 <th class="sortable" data-key="machine">Machine</th>
-                <th class="sortable" data-key="location">Location</th>
                 <th class="sortable" data-key="date">Date</th>
                 <th class="sortable" data-key="notes">Notes</th>
                 <th class="sortable" data-key="status">Status</th>
@@ -786,7 +778,7 @@
             const li = document.createElement("li");
             li.innerHTML = `
               ${type}
-              <button data-id="${id}" class="deleteType"><i class="fa-regular fa-trash-can"></i></button>
+              <button data-tooltip="Delete Machine Type" data-id="${id}" class="deleteType"><i class="fa-regular fa-trash-can"></i></button>
             `;
             list.appendChild(li);
           });
@@ -818,7 +810,7 @@
             const li = document.createElement("li");
             li.innerHTML = `
               ${loc}
-              <button data-id="${id}" class="deleteLocation"><i class="fa-regular fa-trash-can"></i></button>
+              <button data-id="${id}" data-tooltip="Delete Location" class="deleteLocation"><i class="fa-regular fa-trash-can"></i></button>
             `;
             list.appendChild(li);
           });
@@ -855,14 +847,14 @@
               <td>${user.name || ""}</td>
               <td>${user.email || ""}</td>
               <td>
-                <select data-uid="${uid}" class="roleSelect">
+                <select data-uid="${uid}" class="roleSelect" data-tooltip="Change User Role">
                   <option value="supervisor" ${user.role === "supervisor" ? "selected" : ""}>Supervisor</option>
                   <option value="full" ${user.role === "full" ? "selected" : ""}>Full Tech</option>
                   <option value="trial" ${user.role === "trial" ? "selected" : ""}>Trial Tech</option>
                 </select>
               </td>
               <td>
-                <button class="danger deleteUserBtn" data-uid="${uid}" data-email="${user.email}">
+                <button data-tooltip="Delete User" class="danger deleteUserBtn" data-uid="${uid}" data-email="${user.email}">
                   <i class="fa-regular fa-trash-can"></i>
                 </button>
               </td>
@@ -1185,7 +1177,6 @@
 
           if (tab === "maintenance") {
             document.getElementById("maintenanceTab").classList.remove("hidden");
-            loadMaintenanceLocations();
             
             if(userRole === "supervisor")
             {
@@ -1237,25 +1228,7 @@
         const text = authStatus.textContent || "";
         return text.replace("Logged in as:", "").trim();
       }
-      function loadMaintenanceLocations(selected = "") {
-        get(ref(db, "extras/locations")).then((snap) => {
-          const data = snap.val() || {};
-          const select = document.getElementById("maintenanceLocation");
-
-          select.innerHTML = `<option value="">Select Location</option>`;
-
-          Object.values(data).forEach((loc) => {
-            const opt = document.createElement("option");
-            opt.value = loc;
-            opt.textContent = loc;
-            if (loc === selected) opt.selected = true;
-            select.appendChild(opt);
-          });
-        });
-      }
-
-
-      
+           
 
       // =====================
       // REALTIME DATABASE SETUP
@@ -1461,24 +1434,29 @@
 
           tr.innerHTML = `
             <td>${r.machine || ""}</td>
-            <td>${r.location || ""}</td>
             <td>${formattedDate || ""}</td>
             <td>${r.notes || ""}</td>
             <td>${r.status || ""}</td>
             <td>
-              <button type="button" class="secondary" data-id="${r.id}" data-action="edit">
+            <div class="maint-btn-grid">
+              <button type="button" class="btn-edit" data-id="${r.id}" data-action="edit" data-tooltip="Edit Entry">
                 <i class="fa-solid fa-pen"></i>
               </button>
 
               ${userRole === "trial" ? "" : `
-                <button type="button" class="danger" data-id="${r.id}" data-action="delete">
+                <button type="button" class="btn-delete" data-id="${r.id}" data-action="delete" data-tooltip="Delete Entry">
                   <i class="fa-regular fa-trash-can"></i>
                 </button>
               `}
 
-              <button type="button" class="secondary" data-machine="${r.machine}" data-action="viewHistory">
+              <button type="button" class="btn-history" data-machine="${r.machine}" data-action="viewHistory" data-tooltip="View History">
                 <i class="fa-solid fa-clock-rotate-left"></i>
               </button>
+              <button type="button" class="btn-view" data-machine="${r.machine}" data-action="viewMachine" data-tooltip="View Machine">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+              </div>
+            </td>
             </td>
           `;
 
@@ -1503,7 +1481,6 @@
 
               maintIdInput.value = row.id;
               machine.value = row.machine || "";
-              loadMaintenanceLocations(row.location || "");
               date.value = row.date || "";
               notes.value = row.notes || "";
               status.value = row.status || "Operational";
@@ -1518,7 +1495,7 @@
                 remove(ref(db, `maintenance/${id}`));
               }
             }
-
+            
             if (action === "viewHistory") {
               const machineName = btn.dataset.machine;
 
@@ -1527,6 +1504,29 @@
 
               renderMaintenanceLogTable();
               window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+            if (action === "viewMachine") {
+              document.querySelector('.tab-btn[data-tab="booths"]').click();
+              loadMachineOverview();
+
+              const rawId = btn.dataset.machine;
+              const machineId = rawId.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
+
+              // Wait for Booth Overview to finish rendering
+              setTimeout(() => {
+                const card = document.getElementById(`${machineId}-booth`);
+                if (!card) return;
+
+                card.scrollIntoView({ behavior: "smooth", block: "center" });
+
+                // Start pulse animation AFTER scroll
+                setTimeout(() => {
+                  card.classList.remove("highlight");
+                  void card.offsetWidth;
+                  card.classList.add("highlight");
+                }, 600);
+
+              }, 200);
             }
           });
         });
@@ -1555,10 +1555,10 @@
             <td>${t.trialTech || ""}</td>
             <td>${formatDate(t.date || new Date(t.timestamp).toISOString())}</td>
             <td>
-              <button type="button" class="secondary" data-id="${t.id}" data-action="viewOriginal">Original</button>
-              <button type="button" class="secondary" data-id="${t.id}" data-action="viewEdited">Edited</button>
-              <button type="button" class="success" data-id="${t.id}" data-action="approve"><i class="fa-solid fa-check"></i></button>
-              <button type="button" class="danger" data-id="${t.id}" data-action="reject"><i class="fa-solid fa-xmark"></i></button>
+              <button type="button" class="secondary" data-id="${t.id}" data-action="viewOriginal" data-tooltip="View Original Entry">Original</button>
+              <button type="button" class="secondary" data-id="${t.id}" data-action="viewEdited" data-tooltip="View Changed Entry">Edited</button>
+              <button type="button" class="success" data-id="${t.id}" data-action="approve" data-tooltip="Approve Trail Edit"><i class="fa-solid fa-check"></i></button>
+              <button type="button" class="danger" data-id="${t.id}" data-action="reject" data-tooltip="Deny Trial Edit"><i class="fa-solid fa-xmark"></i></button>
             </td>
           `;
           tbody.appendChild(tr);
@@ -1729,7 +1729,6 @@
           let formattedDate = formatDate(r.date);
           tr.innerHTML = `
             <td>${r.machine}</td>
-            <td>${r.location}</td>
             <td>${formattedDate}</td>
             <td>${r.notes}</td>
             <td>${r.status}</td>
@@ -1943,11 +1942,11 @@
                 <div><span class="label">Amount:</span> <span class="value">${p.amount}</span></div>
 
                 <div class="stock-buttons">
-                  <button class="secondary" data-id="${p.id}" data-action="inc">+</button>
-                  <button class="secondary" data-id="${p.id}" data-action="dec">-</button>
-                  <button class="secondary" data-id="${p.id}" data-action="edit"><i class="fa-solid fa-pen"></i></button>
-                  <button class="danger" data-id="${p.id}" data-action="delete"><i class="fa-regular fa-trash-can"></i></button>
-                  <button class="primary" data-id="${p.id}" data-action="request">Request</button>
+                  <button class="secondary" data-id="${p.id}" data-action="inc" data-tooltip="Increase Stock">+</button>
+                  <button class="secondary" data-id="${p.id}" data-action="dec" data-tooltip="Decrease Stock">-</button>
+                  <button class="secondary" data-id="${p.id}" data-action="edit" data-tooltip="Edit Stock"><i class="fa-solid fa-pen"></i></button>
+                  <button class="danger" data-id="${p.id}" data-action="delete" data-tooltip="Delete Item"><i class="fa-regular fa-trash-can"></i></button>
+                  <button class="primary" data-id="${p.id}" data-action="request" data-tooltip="Request Part/Stock">Request</button>
                 </div>
               </div>
             `
@@ -2058,7 +2057,7 @@
         list.innerHTML = Object.entries(data)
           .map(([id, r]) => `
             <div class="mini-card" style="position: relative;">
-              <button class="delete-request-btn" data-id="${id}" data-action="deleteRequest"><i class="fa-regular fa-trash-can"></i></button>
+              <button class="delete-request-btn" data-id="${id}" data-action="deleteRequest" data-tooltip="Delete Request"><i class="fa-regular fa-trash-can"></i></button>
               
               <h3>${r.partType}</h3>
               <p><strong>Part Number:</strong> ${r.partNumber}</p>
@@ -2071,8 +2070,8 @@
 
               <div class="request-actions">
                 ${r.status === "pending" ? `
-                  <button class="primary" data-id="${id}" data-action="approve"><i class="fa-solid fa-check"></i></button>
-                  <button class="danger" data-id="${id}" data-action="deny"><i class="fa-solid fa-xmark"></i></button>
+                  <button class="primary" data-id="${id}" data-action="approve" data-tooltip="Aprove The Request"><i class="fa-solid fa-check"></i></button>
+                  <button class="danger" data-id="${id}" data-action="deny" data-tooltip="Deny The Request"><i class="fa-solid fa-xmark"></i></button>
                 ` : `
                   <p><strong>Status:</strong> ${r.status}</p>
                 `}
@@ -2296,8 +2295,8 @@
             <td>${r.airType || ""}</td>
             <td style="${psiColor}">${r.psi ?? 0}</td>
             <td>
-              <button class="secondary" data-id="${r.id}" data-action="edit"><i class="fa-solid fa-pen"></i></button>
-              <button class="danger" data-id="${r.id}" data-action="delete"><i class="fa-regular fa-trash-can"></i></button>
+              <button class="secondary" data-id="${r.id}" data-action="edit" data-tooltip="Edit Tank"><i class="fa-solid fa-pen"></i></button>
+              <button class="danger" data-id="${r.id}" data-action="delete" data-tooltip="Delete This Tank"><i class="fa-regular fa-trash-can"></i></button>
             </td>
           `;
 
@@ -2575,8 +2574,9 @@
           locationList.forEach(loc => {
             const card = document.createElement("div");
             card.className = "location-card";
-
+            
             const machinesHere = grouped[loc];
+            
 
             card.innerHTML = `
               <h3>Location: ${loc}</h3>
@@ -2584,9 +2584,11 @@
                 machinesHere.length === 0
                   ? `<p class="label">No machines assigned</p>`
                   : machinesHere.map(m => `
-                    <div class="machine-item" data-id="${m.id}">
-                      <button class="edit-machine-btn" data-id="${m.id}"><i class="fa-solid fa-pen"></i></button>
-                      <button class="quick-swap-btn" data-id="${m.id}">Swap</button>
+                    <div class="machine-item" data-id="${m.id}" id="${m.id}-booth">
+                    <div class="machine-actions">
+                      <button class="edit-machine-btn" data-id="${m.id} data-tooltip="Edit This Machine""><i class="fa-solid fa-pen"></i></button>
+                      <button class="quick-swap-btn" data-id="${m.id}" data-tooltip="Swap This Machine">Swap</button>
+                    </div>
 
                       <div><span class="label">Type:</span> <span class="value">${m.machineType}</span></div>
                       <div><span class="label">Name:</span> <span class="value">${m.machineName}</span></div>
@@ -2670,8 +2672,9 @@
                 : unassignedTanks.sort((a, b) => (b.psi ?? 99999) - (a.psi ?? 99999))
                     .map(t => `
                       <div class="machine-item" data-tank="${t.tankName}">
-                        <button class="assign-tank-btn" data-tank="${t.tankName}">Assign</button>
-
+                      <div class="machine-actions">
+                        <button class="assign-tank-btn" data-tank="${t.tankName}" data-tooltip="Assign Tank">Assign</button>
+                      </div>
                         <div><span class="label">Tank:</span> <span class="value">${t.tankName}</span></div>
                         <div><span class="label">Air Type:</span> <span class="value">${t.airType || "-"}</span></div>
 
@@ -2711,9 +2714,10 @@
 
                     .map(t => `
                       <div class="machine-item" data-tank="${t.tankName}">
-                        <button class="reassign-tank-btn" data-tank="${t.tankName}">Re-Assign</button>
-                        <button class="unassign-tank-btn" data-tank="${t.tankName}">Unassign</button>
-
+                      <div class="machine-actions">
+                        <button class="reassign-tank-btn" data-tank="${t.tankName}" data-tooltip="Put the tank on a different machine">Re-Assign</button>
+                        <button class="unassign-tank-btn" data-tank="${t.tankName}" data-tooltip="Unassign this machine">Unassign</button>
+                      </div>
 
                         <div><span class="label">Tank:</span> <span class="value">${t.tankName}</span></div>
                         <div><span class="label">Air Type:</span> <span class="value">${t.airType || "-"}</span></div>
